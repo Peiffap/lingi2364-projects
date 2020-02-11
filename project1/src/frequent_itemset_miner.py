@@ -73,28 +73,33 @@ class Dataset:
 
 
 def apriori(filepath, minFrequency):
-    """Runs the apriori algorithm on the specified file with the given minimum frequency"""
-    data = Dataset(filepath)
-    minSupport = minFrequency * data.trans_num()
+    """Runs the apriori algorithm on the specified file with the given minimum frequency
+       This function implements the naive version of the algorithm"""
+    data = Dataset(filepath) # read data
+    minSupport = minFrequency * data.trans_num() # compute minimal support
 
     level = 1
-    F = [[set([])], [set([])]]
+    F = [[set([])]] # frequent sets
     while True:
         F.append([])
+        # list of subsets of items of size level
         Clist = [set(i) for i in itertools.combinations(range(1, data.items_num() + 1), level)]
         for C in Clist:
             subsets = [set(i) for i in itertools.combinations(C, len(C) - 1)]
+            # subsets of C with one element removed
             allIn = True
             for s in subsets:
                 if s not in F[level-1]:
+                    # if some subset is not frequent, C is not a candidate
                     allIn = False
                     break
             if allIn and data.support(C) >= minSupport:
+                # append frequent itemsets
                 F[level].append(C)
         if (len(F[level]) != 0):
             for s in F[level]:
                 if s != set([]):
-                    print(list(s), " ({:g})".format(data.frequency(s)))
+                    print(list(s), " ({:g})".format(data.frequency(s))) # print frequent sets
         else:
             break
 
