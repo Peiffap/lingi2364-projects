@@ -21,68 +21,38 @@ Do not change the signature of the apriori and alternative_miner methods as they
 __authors__ = Group 13, Gilles Peiffer & Liliya Semerikova
 """
 import time
-
-
-class Dataset:
-    """Utility class to manage a dataset stored in a external file."""
-
-    def __init__(self, filepath):
-        """reads the dataset file and initializes files"""
-        self.transactions_set = list()
-        self.items = 0
-        self.trans = 0
-
-        try:
-            lines = [line.strip() for line in open(filepath, "r")]
-            lines = [line for line in lines if line]  # Skipping blank lines
-            self.trans = len(lines)
-            for line in lines:
-                transaction = set(map(int, line.split(" ")))
-                self.transactions_set.append(transaction)
-            self.items = max([max(i) for i in self.transactions_set])
-        except IOError as e:
-            print("Unable to read dataset file!\n" + e)
-
-    def trans_num(self):
-        """Returns the number of transactions in the dataset"""
-        return self.trans
-
-    def items_num(self):
-        """Returns the number of different items in the dataset"""
-        return self.items
-
-    def get_transaction_set(self, i):
-        """Returns the transaction at index i as a set"""
-        return self.transactions_set[i]
-
-    def covers(self, i, itemset):
-        """Returns whether the given itemset covers transaction i"""
-        return itemset.issubset(self.get_transaction_set(i))
-
-    def support(self, itemset):
-        """Returns the support of the given itemset for the current list of transactions"""
-        return sum([1 for i in range(self.trans_num()) if self.covers(i, itemset)])
-
-    def frequency(self, itemset):
-        """Returns the frequency of the given itemset for the current list of transactions"""
-        return self.support(itemset)/self.trans_num()
-
+import cProfile
+import numpy as np
 
 def apriori_naive(filepath, minFrequency):
     """Runs the apriori algorithm on the specified file with the given minimum frequency
-       This function implements the naive version of the algorithm"""
+       This function implements the naive version of the algorithm
+
+       WARNING: TO FIX"""
     import itertools
-    data = Dataset(filepath) # read data
-    minSupport = minFrequency * data.trans_num() # compute minimal support
+    comb = itertools.combinations
+    transactions_set = list()
+
+    lines = filter(None, open(filepath, "r").read().splitlines())
+    app = transactions_set.append
+    for line in lines:
+        transaction = list(map(int, line.rstrip().split(" ")))
+        app(set(transaction))
+    trans = len(transactions_set)
+    items = max(max(t) for t in transactions_set)
+
+    def frequency(itemset):
+        """Returns the frequency of the given itemset for the current list of transactions"""
+        return len(list(filter(itemset.issubset, transactions_set)))/trans
 
     level = 1
     F = [[[]]] # frequent sets
-    while True:
+    while F[level-1] != []:
         F.append([])
         # list of subsets of items of size level
-        Clist = [i for i in itertools.combinations(range(1, data.items_num() + 1), level)]
+        Clist = [list(i) for i in comb(range(1, items + 1), level)]
         for C in Clist:
-            subsets = [i for i in itertools.combinations(C, len(C) - 1)]
+            subsets = [list(i) for i in comb(C, len(C) - 1)]
             # subsets of C with one element removed
             allIn = True
             for s in subsets:
@@ -90,70 +60,80 @@ def apriori_naive(filepath, minFrequency):
                     # if some subset is not frequent, C is not a candidate
                     allIn = False
                     break
-            if allIn and data.support(set(C)) >= minSupport:
+            freq = frequency(set(C))
+            if allIn and freq >= minFrequency:
                 # append frequent itemsets
                 F[level].append(C)
-        if len(F[level]) != 0:
-            for s in F[level]:
-                if s != []:
-                    print(list(s), " ({:g})".format(data.frequency(set(s)))) # print frequent sets
-        else:
-            break
-
+                if C != []:
+                    print("%s  (%g)" % (C, freq))
         level += 1
 
 def apriori(filepath, minFrequency):
     """Runs the improved apriori algorithm on the specified file with the given minimum frequency
-       This function implements an improved version of the algorithm"""
-    data = Dataset(filepath) # read data
+       This function implements an improved version of the algorithm, and uses a different membership detection"""
+    transactions_set = list()
+    lines = filter(None, open(filepath, "r").read().splitlines())
+    app = transactions_set.append
+    items = 0
+    for line in lines:
+        transaction = list(map(int, line.rstrip().split(" ")))
+        items = max(items, transaction[-1])
+        app(set(transaction))
+    trans = len(transactions_set)
 
-    def generate_candidates(l):
-        """Return list of candidate sets obtained by prefix matching on previous frequent sets"""
-        candidates = []
-        for i in range(len(l)):
-            l1 = l[i]
-            prev = -1
-            for j in range(i+1, len(l)):
-                l2 = l[j]
-                if l2[-1] <= prev: # if prev is not negative, the prefix must've gone too high -> skip remaining l2's
-                    break
-                if l1[:-1] == l2[:-1]: # if the sets share a common prefix
-                    candidates.append(l1 + [l2[-1]])
-                    prev = l2[-1]
-        return candidates
+    member = [set() for i in range(items+1)]
+    for t in range(len(transactions_set)):
+        for i in transactions_set[t]:
+            member[i].add(t)
 
+    def frequency(itemset):
+        """Returns the frequency of the given itemset for the current list of transactions"""
+        s = member[itemset[0]]
+        if len(itemset) > 1:
+            for i in itemset[1:]:
+                s = s & member[i]
+                if len(s) < trans * minFrequency:
+                    return 0
+        return len(s)/trans
 
     F = [] # frequent sets
-    freq = list(map(data.frequency, [set([i]) for i in range(1, data.items_num() + 1)]))
-    for i in range(0, len(freq)):
-        if freq[i] >= minFrequency:
-            F.append([i + 1])
-            print("%s  (%g)" % ([i+1], freq[i])) # print frequent sets
+    for i in range(items):
+        freq = frequency([i + 1])
+        if freq >= minFrequency:
+            F += [[i+1]]
+            print("%s  (%g)" % ([i+1], freq)) # print frequent sets
     while F != []:
         # list of subsets of items of size level
-        Clist = generate_candidates(F)
+        l = F[:] # copy the list
         F = []
-        freq = list(map(data.frequency, [set(C) for C in Clist]))
-        for i in range(len(freq)):
-            if freq[i] >= minFrequency:
-                # append frequent itemsets
-                F.append(Clist[i])
-                print("%s  (%g)" % (Clist[i], freq[i]))
+        cnt = 1
+        for l1 in l[:-1]:
+            l11 = l1[:-1]
+            for l2 in l[cnt:]:
+                if l11 == l2[:-1]: # if the sets share a common prefix
+                    newl = l1 + [l2[-1]]
+                    freq = frequency(newl)
+                    if freq >= minFrequency:
+                        F += [newl]
+                        print("%s  (%g)" % (newl, freq))
+                else: # prefix will never be the same again, we can skip
+                    break
+            cnt += 1
 
 def alternative_miner(filepath, minFrequency):
     """Runs the alternative frequent itemset mining algorithm on the specified file with the given minimum frequency
        This function implements the ECLAT algorithm"""
     # TODO
-    apriori(filepath, minFrequency)
+    print("TODO")
 
 if __name__== "__main__":
     s = time.perf_counter()
-    #apriori_naive("../statement/Datasets/toy.dat", 0.125)
+    apriori_naive("../statement/Datasets/chess.dat", 0.9)
     t = time.perf_counter()
     print(t - s)
     print()
     s = time.perf_counter()
-    apriori("../statement/Datasets/chess.dat", 0.9)
+    #apriori("../statement/Datasets/accidents.dat", 0.8)
     t = time.perf_counter()
     print(t - s)
     print()
@@ -161,3 +141,5 @@ if __name__== "__main__":
     #alternative_miner("../statement/Datasets/chess.dat", 0.9)
     t = time.perf_counter()
     print(t - s)
+
+    #cProfile.run('apriori("../statement/Datasets/chess.dat", 0.9)')
