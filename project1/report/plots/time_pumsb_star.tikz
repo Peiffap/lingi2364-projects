@@ -1,0 +1,112 @@
+% This file was created by tikzplotlib v0.9.1.
+\begin{tikzpicture}
+
+\definecolor{color0}{rgb}{0.886274509803922,0.290196078431373,0.2}
+\definecolor{color1}{rgb}{0.203921568627451,0.541176470588235,0.741176470588235}
+\definecolor{color2}{rgb}{0.596078431372549,0.556862745098039,0.835294117647059}
+\definecolor{color3}{rgb}{0.984313725490196,0.756862745098039,0.368627450980392}
+
+\begin{axis}[
+axis background/.style={fill=white!89.8039215686275!black},
+axis line style={white},
+log basis y={10},
+tick align=outside,
+tick pos=left,
+width=\linewidth,
+x dir=reverse,
+x grid style={white},
+xlabel={Minimum support threshold},
+xmajorgrids,
+xmin=0, xmax=49046,
+xtick style={color=white!33.3333333333333!black},
+y grid style={white},
+ylabel={Execution time [\si{\second}]},
+ymajorgrids,
+ymin=0.862964834247541, ymax=191.055642324597,
+ymode=log,
+ytick style={color=white!33.3333333333333!black}
+]
+\end{axis}
+
+\begin{axis}[
+axis background/.style={fill=white!89.8039215686275!black},
+axis line style={white},
+axis x line=top,
+legend cell align={left},
+legend style={fill opacity=0.8, draw opacity=1, text opacity=1, at={(0.03,0.97)}, anchor=north west, draw=white!80!black, fill=white!89.8039215686275!black},
+log basis y={10},
+tick align=outside,
+width=\linewidth,
+x dir=reverse,
+x grid style={white},
+xlabel={Minimum frequency threshold},
+xmajorgrids,
+xmin=0.3825, xmax=0.7675,
+xtick pos=right,
+xtick style={color=white!33.3333333333333!black},
+y grid style={white},
+ymajorgrids,
+ymin=0.862964834247541, ymax=191.055642324597,
+ymode=log,
+ytick pos=left,
+ytick style={color=white!33.3333333333333!black}
+]
+\addplot [semithick, color0, mark=x, mark size=3, mark options={solid}]
+table {%
+0.75 1.6907297430007
+0.7 1.79545457499626
+0.65 2.93643868200888
+0.6 4.14078531999257
+0.55 7.5962445299956
+0.5 18.4139816450042
+0.45 60.2080177180032
+};
+\addlegendentry{\py{apriori_prefix}}
+\addplot [semithick, color1, mark=x, mark size=3, mark options={solid}]
+table {%
+0.75 1.53708817799634
+0.7 1.77893189201131
+0.65 1.95372162001149
+0.6 2.51543336399482
+0.55 3.90123002800101
+0.5 7.3503974579944
+0.45 25.1795529490046
+};
+\addlegendentry{\py{apriori_prefix_vdb}}
+\addplot [semithick, color2, mark=x, mark size=3, mark options={solid}]
+table {%
+0.75 1.11899854100193
+0.7 1.27045502499095
+0.65 1.55899453499296
+0.6 1.75690809900698
+0.55 2.40607776600518
+0.5 4.30719135999971
+0.45 12.8492832850025
+0.4 149.472527559003
+};
+\addlegendentry{\py{apriori_dict}}
+\addplot [semithick, white!46.6666666666667!black, mark=x, mark size=3, mark options={solid}]
+table {%
+0.75 1.26190475099429
+0.7 3.46516812300251
+0.65 7.02687296101067
+0.6 12.7517249189987
+0.55 19.8768840539997
+0.5 34.3249251379893
+0.45 66.4434537210036
+};
+\addlegendentry{\py{dfs1}}
+\addplot [semithick, color3, mark=x, mark size=3, mark options={solid}]
+table {%
+0.75 1.10304082899529
+0.7 1.44024919399817
+0.65 2.01487440300116
+0.6 2.99367024599633
+0.55 5.15012833000219
+0.5 10.4561460359982
+0.45 24.7728795680014
+};
+\addlegendentry{\py{dfs2}}
+\end{axis}
+
+\end{tikzpicture}
