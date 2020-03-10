@@ -1,21 +1,312 @@
+\documentclass[journal, 9pt]{IEEEtran}
+\usepackage[left=1.25cm,right=1.25cm,top=1.25cm,bottom=1.25cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{minted}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{mathtools}
+\usepackage{color}
+\usepackage{amsthm}
+\usepackage{parskip}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
 
 
 
+\linespread{0.9}
 
+\newcommand{\subparagraph}{}
+\usepackage[compact]{titlesec}
 
-% TODO
-% - apriori naif
-% - apriori intelligent
-% - DFS algo
-% - rapport
+\titlespacing{\section}{0pt}{\parskip}{-\parskip}
+\titlespacing{\subsection}{0pt}{\parskip}{-\parskip}
+\titlespacing{\subsubsection}{0pt}{\parskip}{-\parskip}
 
-% tests:
-% - 
+\usepackage{pgfplots}
+\pgfplotsset{compat=newest}
+\usepgfplotslibrary{groupplots}
+\usepgfplotslibrary{dateplot}
+\usepackage{tikzscale}
 
+\theoremstyle{definition}
+\newtheorem{defn}{Definition}[section]
 
-% http://fimi.uantwerpen.be/src/
-% time and memusage commands
+\usepackage[binary-units=true]{siunitx}
 
-% make apriori with prefix tries
-% eclat similar to current apriori
-% fpgrowth? maybe too complex
+\newcommand{\py}[1]{\mintinline{python}{#1}}
+\newcommand{\java}[1]{\mintinline{java}{#1}}
+\newcommand{\sql}[1]{\mintinline{sql}{#1}}
+
+\renewcommand{\epsilon}{\varepsilon}
+\renewcommand{\theta}{\vartheta}
+\renewcommand{\kappa}{\varkappa}
+\renewcommand{\rho}{\varrho}
+\renewcommand{\phi}{\varphi}
+
+\newcommand{\db}{\mathcal{D}}
+\newcommand{\is}{\mathcal{I}}
+\newcommand{\tr}{\mathcal{T}}
+
+\newcommand{\abs}[1]{|#1|}
+
+\usepackage{hyperref}
+
+\title{Mining Patterns in Data --- Implementing Apriori}
+\author{Gilles Peiffer (24321600), Liliya Semerikova (64811600)}
+\date{March 13, 2020}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+	This paper studies the performance of various apriori implementations, as well as some depth-first search algorithms, for the frequent itemset mining problem.
+	Implementations are discussed and compared to experimental results in order to identify bottlenecks, and gain understanding of the inner workings of the various algorithms seen during the lectures.
+\end{abstract}
+
+\section*{Introduction}
+Apriori is arguably the simplest of the many algorithms developed in order to solve the frequent itemset mining problem, hereinafter referred to as ``FIM''.
+Formally, one can define a set of \emph{transaction identifiers} \(\tr\), and a set of \emph{items} \(\is\).
+A \emph{transactional database} \(\db\) can then be represented as a function that returns, for every transaction identifier, a set of items: \(\db \colon \tr \to 2^\is\).
+An itemset \(I \subseteq \is\) is said to \emph{cover} a transaction \(T \subseteq \tr\) if and only if \(I \subseteq T\).
+Similarly, the \emph{cover} of an itemset \(I \subseteq \is\) in a database \(\db\) is the set of transactions it covers in the database.
+Finally, the \emph{support} of an itemset is the cardinality of its cover.
+This can be extended to define the notion of \emph{frequent}: an itemset is frequent if its normalized support is above a given minimum support threshold, \(\theta\).
+FIM is concerned with finding the set of frequent itemsets for a given database: \(\{I \subseteq \is : \abs{\{t \in \tr: I \subseteq \db(t)\}} > \theta\}\).
+
+\section{Algorithms and Implementations}
+Various algorithms exist for FIM, each with its own properties.
+This section explains the various algorithms which were used for the performance tests of Section~\ref{sec:perf}.
+
+\subsection{Apriori}
+The apriori algorithm is the simplest of the FIM algorithms.
+Different implementations were used, each of which has its own characteristics.
+More information about the effect of using various data structures on the algorithm can be found in \cite{apriori_bodon, apriori_prefix}.
+\subsubsection{Naive Apriori (\py{apriori_naive})}
+Naive apriori is the most basic version of the apriori algorithm.
+It starts by generating all candidate subsets \(\mathcal{S} \subseteq \is\) of a given cardinality, then, for each \(\mathcal{S}\), it computes all subsets of \(\mathcal{S}\) and checks whether these are all frequent.
+If not, \(\mathcal{S}\) is discarded based on the anti-monotonicity property, but if they are, then the support of \(\mathcal{S}\) is computed and is checked against the minimum support treshold.
+\py{apriori_naive2} does not implement this anti-monotonicity pruning.
+To compute the support, the itemset is checked against every transaction to determine whether it is a subset.
+This process is continued while there are frequent itemsets left at the level below.
+
+\subsubsection{Apriori with Prefix Generation (\py{apriori_prefix})}
+Instead of generating all possible itemsets, those at level \(\ell-1\) can be combined if they share the same prefix, thus only generating candidates which already have at least two frequent subsets at level \(\ell\).
+Due to the reduced likelihood of having infrequent candidates, anti-monotonicity pruning is not used.
+Additionally, one can compute the number of covering transactions for singleton itemsets, and use this to quickly compute their support.
+
+\subsubsection{Apriori with Prefix Generation and Vertical Database Representation (\py{apriori_prefix_vdb})}
+One can speed up the support computation by reusing the list of supporting transactions for each singleton itemset.
+To compute the support of a given itemset \(I = \{i_1, \ldots, i_n\}\), one can then simply compute \(\mathrm{support}(I) = \bigcap_{j = 1}^{n} \mathrm{support}(\{i_j\})\),
+which can be done efficiently using the \py{set} data structure to store the vertical representations of the database.
+This algorithm thus uses projected databases, on which DFS algorithms are based.
+
+\subsubsection{Apriori with Prefix Generation and Vertical Database Representation using Dictionaries (\py{apriori_dict})}
+\label{sec:apriori_dict}
+Using dictionaries, one can easily store the vertical representations for larger itemsets as well, without recomputing intersections too often.
+
+\subsection{Depth-First Search}
+DFS-based algorithms are slightly more complex than apriori.
+In order to showcase the performance differences with apriori, this paper also explores some of these algorithms.
+DFS algorithms use the idea of projected databases to construct new candidate itemsets.
+Our first implementation, \py{dfs1}, uses a stack to make this happen in a depth-first manner, and a dictionary to store the vertical representations of the dataset, as explained in Section~\ref{sec:apriori_dict}.
+By generating candidates more intelligently, one can reduce the number of generated candidate sets further, as done in the implementation \py{dfs2}.
+More information about DFS algorithms can be found in \cite{eclat}.
+
+\section{Performance}
+\label{sec:perf}
+\subsection{Function calls}
+Table~\ref{tab:fcalls} summarizes, for each algorithm ran on the ``chess'' dataset with a minimum frequency threshold \(\theta = 0.98\), the number of candidates it generates; the number of times it computes the support of a candidate; and the number of frequent itemsets it finds.
+From this table, it is clear that for apriori, using prefixes to generate candidates is incredibly important.
+Despite all having the same number of functions calls, the ``intelligent'' apriori algorithms have sizeable differences in performance.
+\begin{table}[!hbtp]
+	\label{tab:fcalls}
+	\centering
+	\begin{tabular}{lrrr}
+		\toprule
+		Algorithm & Generated & Support & Frequent \\
+		 \midrule
+		\py{apriori_naive} & 18545215 & 93 & 21 \\
+		\py{apriori_naive2} & 18545215 & 18545215 & 21  \\
+		\py{apriori_prefix} & 94 & 94 & 21 \\
+		\py{apriori_prefix_vdb} & 94 & 94 & 21 \\
+		\py{apriori_dict} & 94 & 94 & 21 \\
+		\py{dfs1} & 509 & 509 & 509 \\
+		\py{dfs2} & 101 & 101 & 21 \\
+		\bottomrule\\
+	\end{tabular}
+	\caption{Number of generated candidates, supports computed and frequent itemsets found by each algorithm.}
+\end{table}
+
+In the rest of this section, algorithms are analyzed both from an execution time point of view, and from a memory usage point of view, on each of the available datasets.
+Experiments were run on an Early 2015 MacBook Pro, using Python 3.6.8 and macOS Sierra 10.12.6, using a \SI{2.9}{\giga\hertz} Intel Core i5 processor, with \SI{8}{\giga\byte} of \SI{1867}{\mega\hertz} DDR3 RAM and an Intel Iris Graphics 6100 GPU.
+
+\subsection{Time}
+All times were measured using the \py{time.perf_counter()} function, with a timeout of \SI{200}{\second}.
+
+\subsubsection{Accidents}
+As shown on Figure~\ref{fig:time_accidents}, the best algorithms on the ``accidents'' dataset are \py{dfs2} and \py{apriori_dict}, with the latter edging out the former for lower frequency thresholds.
+\py{dfs1} is by far the worst, which makes sense in light of Table~\ref{tab:fcalls}.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_accidents.tikz}
+	\caption{Execution time comparison for the ``accidents'' dataset.}
+	\label{fig:time_accidents}
+\end{figure}
+
+\subsubsection{Chess}
+Figure~\ref{fig:time_chess} gives the execution time comparison for the ``chess'' dataset.
+All algoritms perform similarly, except for \py{apriori_prefix_vdb}, which performs significantly better.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_chess.tikz}
+	\caption{Execution time comparison for the ``chess'' dataset.}
+	\label{fig:time_chess}
+\end{figure}
+
+\subsubsection{Connect}
+Figure~\ref{fig:time_connect}, using the ``connect'' dataset, looks qualitatively very similar to Figure~\ref{fig:time_chess}.
+Quantitatively, however, its viable frequency thresholds are much higher.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_connect.tikz}
+	\caption{Execution time comparison for the ``connect'' dataset.}
+	\label{fig:time_connect}
+\end{figure}
+
+\subsubsection{Mushroom}
+Figure~\ref{fig:time_mushroom} compares the algorithms on the ``mushroom'' dataset.
+It shows that \py{apriori_dict}, \py{apriori_prefix_vdb} and \py{dfs2} are the fastest algorithms.
+The execution times near the beginning are nearly constant and very small; this is probably due to the fact that the dataset initialization is taking up most of the execution time.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_mushroom.tikz}
+	\caption{Execution time comparison for the ``mushroom'' dataset.}
+	\label{fig:time_mushroom}
+\end{figure}
+
+\subsubsection{Pumsb}
+Figure~\ref{fig:time_pumsb} was created using the ``pumsb'' dataset.
+\py{apriori_dict} and \py{apriori_prefix_vdb} are clearly the fastest.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_pumsb.tikz}
+	\caption{Execution time comparison for the ``pumsb'' dataset.}
+	\label{fig:time_pumsb}
+\end{figure}
+
+\subsubsection{Pumsb\_star}
+Figure~\ref{fig:time_pumsb_star} gives the execution time comparison for the ``pumsb\_star'' dataset.
+\py{apriori_dict} is clearly the fastest,.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_pumsb_star.tikz}
+	\caption{Execution time comparison for the ``pumsb\_star'' dataset.}
+	\label{fig:time_pumsb_star}
+\end{figure}
+
+\subsubsection{Retail}
+Figure~\ref{fig:time_retail} looks at the execution times on the ``retail'' dataset.
+\py{dfs2} and \py{apriori_dict} are the fastest algorithms, with the latter edging out the former for lower frequencies.
+Similarly to what is visible in Figure~\ref{fig:time_mushroom}, the execution times near the beginning are nearly constant and very small; this is probably due to the fact that the dataset initialization is taking up most of the execution time.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_retail.tikz}
+	\caption{Execution time comparison for the ``retail'' dataset.}
+	\label{fig:time_retail}
+\end{figure}
+
+\subsection{Memory}
+In order to measure the memory consumption of the program, we use \py{tracemalloc}, comparing snapshots before and after the function call.
+This method is far from perfect, but it is the most reliable choice in the Python standard library.
+Results therefore ought to be taken with a grain of salt.
+
+\subsubsection{Accidents}
+Figure~\ref{fig:size_accidents} showcases the memory consumption on the ``accidents'' dataset.
+\py{apriori_dict} uses by far the most memory, as it maintains a large dictionary with vertical database representations.
+The other apriori algorithms are nearly constant, as are the DFS algorithms, though both classes are about an order of magnitude apart.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_accidents.tikz}
+	\caption{Memory consumption comparison for the ``accidents'' dataset.}
+	\label{fig:size_accidents}
+\end{figure}
+
+\subsubsection{Chess}
+On Figure~\ref{fig:size_chess}, which summarizes memory consumption on the ``chess'' dataset, one can observe again that \py{apriori_dict} usesthe most memory.
+\py{dfs2} is also memory-intensive, due to these algorithms keeping track of extra data structures to speed up computation.
+The other algorithms are approximately constant in their memory consumption.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_chess.tikz}
+	\caption{Memory consumption comparison for the ``chess'' dataset.}
+	\label{fig:size_chess}
+\end{figure}
+
+\subsubsection{Connect}
+The memory consumption for the ``connect'' dataset is shown on Figure~\ref{fig:size_connect}, and is nearly identical (qualitatively) to the consumption on the ``chess'' dataset.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_connect.tikz}
+	\caption{Memory consumption comparison for the ``connect'' dataset.}
+	\label{fig:size_connect}
+\end{figure}
+
+\subsubsection{Mushroom}
+Figure~\ref{fig:size_mushroom} shows that the ``mushroom'' dataset follows the same trends as the others.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_mushroom.tikz}
+	\caption{Memory consumption comparison for the ``mushroom'' dataset.}
+	\label{fig:size_mushroom}
+\end{figure}
+
+\subsubsection{Pumsb}
+Figure~\ref{fig:size_pumsb} shows that on the ``pumsb'' dataset, everything is qualitatively similar, but quantitatively, \py{dfs1} uses about ten times less memory than the next best algorithm, size-wise.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_pumsb.tikz}
+	\caption{Memory consumption comparison for the ``pumsb'' dataset.}
+	\label{fig:size_pumsb}
+\end{figure}
+
+\subsubsection{Pumsb\_star}
+Results for the ``pumsb\_star'' dataset are nearly identical to the ones for ``\py{pumsb}, as can be seen on Figure~\ref{fig:size_pumsb_star}.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_pumsb_star.tikz}
+	\caption{Memory consumption comparison for the ``pumsb\_star'' dataset.}
+	\label{fig:size_pumsb_star}
+\end{figure}
+
+\subsubsection{Retail}
+Figure~\ref{fig:size_retail} also shows that the simple apriori algorithms are nearly constant in their memory consumption.
+\py{apriori_dict} is unsurprisingly the most memory-intensive algorithm, but all algorithms get exponentially more memory-intensive for low frequency thresholds.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_retail.tikz}
+	\caption{Memory consumption comparison for the ``retail'' dataset.}
+	\label{fig:size_retail}
+\end{figure}
+
+\section*{Conclusion}
+There are many things one can conclude from these experimental results.
+For a start, there is no algorithm which is both optimal from an execution time point of view and from a memory consumption point of view.
+A second thing to infer is that no algorithm is optimal (for a given characteristic) for every dataset.
+On the datasets that were tested, \py{apriori_dict} \textit{usually} runs the fastest (but uses the most memory) while \py{dfs1} \textit{usually} uses the least memory (but runs the slowest).
+Algorithm design for FIM is thus dependent on the properties of the dataset, in order to obtain a good trade-off between speed and size.
+
+\begin{thebibliography}{9}
+	\bibitem{apriori_bodon}
+	Ferenc Bodon, \textit{Surprising Results of Trie-based FIM Algorithms}, \href{http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-126/bodon.pdf}{link}, 2004.
+	\bibitem{apriori_prefix}
+	Gösta Grahne and Jianfei Zhu, \textit{Efficiently Using Prefix-trees in Mining Frequent Itemsets}, \href{http://ceur-ws.org/Vol-90/grahne.pdf}{link}, 2003.
+	\bibitem{eclat}
+	Lars Schmidt-Thieme, \textit{Algorithmic Features of Eclat}, \href{http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-126/schmidtthieme.pdf}{link}, 2004.
+\end{thebibliography}
+
+\end{document}
