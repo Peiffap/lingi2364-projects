@@ -22,6 +22,7 @@ __authors__ = Group 13, Gilles Peiffer & Liliya Semerikova
 """
 import time
 import cProfile
+from collections import defaultdict, deque
 
 def apriori_naive(filepath, minFrequency):
     """Runs the apriori algorithm on the specified file with the given minimum frequency
@@ -70,40 +71,46 @@ def apriori(filepath, minFrequency):
        and uses a different membership detection algorithm"""
 
     # read data; this is heavily inspired from the provided template
-    transactions_set = list()
-    lines = filter(None, open(filepath, "r").read().splitlines())
-    app = transactions_set.append
-    items = 0
-    for line in lines:
-        transaction = list(map(int, line.rstrip().split(" ")))
-        items = max(items, transaction[-1]) # transactions are sorted, find number of items
-        app(set(transaction))
-    trans = len(transactions_set) # number of transactions
+    lines = list(filter(None, open(filepath, "r").read().splitlines()))
+    trans = len(lines) # number of transactions
+    singleton_projection = defaultdict(set)
+    for l in range(trans):
+        transaction = list(map(int, lines[l].rstrip().split(" ")))
+        for i in transaction:
+            singleton_projection[i].add(l) # store the transactions l in which item i appears
 
-    member = [set() for i in range(items+1)]
-    for t in range(len(transactions_set)):
-        for i in transactions_set[t]:
-            member[i].add(t) # store the transactions t in which item i appears
+    items = max(singleton_projection) # number of items is maximum dict index
+
+    member = defaultdict(set)
 
     minSupport = trans * minFrequency
-    def frequency(itemset):
-        """Returns the frequency of the given itemset for the current list of transactions"""
-        # compute the intersection of all member[i] where i in itemset
-        # this intersection contains all the transactions covered by itemset
-        s = member[itemset[0]]
-        if len(itemset) > 1:
-            for i in itemset[1:]:
-                s = s & member[i]
-                if len(s) < minSupport:
-                    return 0
-        return len(s)/trans
+    if not minSupport == int(minSupport):
+        minSupport = int(minSupport) + 1
+
+    def support(itemset):
+        """Returns the support of the given itemset for the current list of transactions"""
+        # compute the intersection of the prefix' support and the last item's
+        if len(itemset) == 2: # if length is two, need to use singleton_projection
+            tmp = singleton_projection[itemset[0]] & singleton_projection[itemset[1]]
+            l = len(tmp)
+            if l >= minSupport: # only frequent itemsets will be used as prefixes
+                member[hash(itemset)] = tmp
+                return l
+            return 0
+        else:
+            tmp = member[hash(itemset[:-1])] & singleton_projection[itemset[-1]]
+            l = len(tmp)
+            if l >= minSupport:
+                member[hash(itemset)] = tmp
+                return l
+            return 0
 
     F = [] # frequent sets
     for i in range(items):
-        freq = frequency([i + 1])
-        if freq >= minFrequency:
+        supp = len(singleton_projection[i + 1])
+        if supp >= minSupport:
             F += [[i+1]]
-            print("%s  (%g)" % ([i+1], freq)) # print frequent singleton sets
+            print("[%i]  (%g)" % (i+1, supp/trans)) # print frequent singleton sets
     while F != []:
         # list of subsets of items of size level
         l = F[:] # deep copy the list
@@ -114,28 +121,87 @@ def apriori(filepath, minFrequency):
             for l2 in l[cnt:]:
                 if l11 == l2[:-1]: # if the sets share a common prefix
                     newl = l1 + [l2[-1]] # new candidate based on sets sharing prefixes
-                    freq = frequency(newl)
-                    if freq >= minFrequency:
+                    supp = support(tuple(newl))
+                    if supp >= minSupport:
                         F += [newl]
-                        print("%s  (%g)" % (newl, freq)) # print frequent sets
+                        print("%s  (%g)" % (newl, supp/trans)) # print frequent sets
                 else: # prefix will never be the same again, we can skip
                     break
             cnt += 1
 
 def alternative_miner(filepath, minFrequency):
     """Runs the alternative frequent itemset mining algorithm on the specified file with the given minimum frequency
-       This function implements the ECLAT algorithm"""
-    # TODO
-    print("TODO")
+       This function implements a DFS algorithm"""
+    def support(itemset):
+        """Returns the support of the given itemset for the current list of transactions"""
+        # compute the intersection of the prefix' support and the last item's
+        if len(itemset) == 2: # if length is two, need to use singleton_projection
+            tmp = singleton_projection[itemset[0]] & singleton_projection[itemset[1]]
+            l = len(tmp)
+            if l >= minSupport: # only frequent itemsets will be used as prefixes
+                member[hash(itemset)] = tmp
+                return l
+            return 0
+        else:
+            tmp = member[hash(itemset[:-1])] & singleton_projection[itemset[-1]]
+            l = len(tmp)
+            if l >= minSupport:
+                member[hash(itemset)] = tmp
+                return l
+            return 0
+
+    lines = list(filter(None, open(filepath, "r").read().splitlines()))
+    trans = len(lines) # number of transactions
+    singleton_projection = defaultdict(set)
+    for l in range(trans):
+        transaction = list(map(int, lines[l].rstrip().split(" ")))
+        for i in transaction:
+            singleton_projection[i].add(l) # store the transactions l in which item i appears
+
+    items = max(singleton_projection) # number of items is maximum dict index
+
+    member = defaultdict(set)
+
+    minSupport = trans * minFrequency
+    if not minSupport == int(minSupport):
+        minSupport = int(minSupport) + 1
+
+    myStack = deque()
+    freq_list = []
+    for i in range(items, 0, -1):
+        if len(singleton_projection[i]) >= minSupport:
+               myStack.append([i])
+               freq_list.append(i)
+
+    def add(stack, itemset):
+        """Generate candidates to put on the stack"""
+        def ge(x):
+            return x > itemset[-1]
+        for i in filter(ge, freq_list):
+            s = itemset + [i]
+            supp = support(tuple(s))
+            if supp >= minSupport:
+                stack.append(s)
+
+    while not len(myStack) == 0:
+        e = myStack.pop()
+        if len(e) == 1:
+                print("%s  (%g)" % (e, len(singleton_projection[e[0]])/trans))
+                add(myStack, e)
+        else:
+            print("%s  (%g)" % (e, len(member[hash(tuple(e))])/trans))
+            add(myStack, e)
+
+    print(minSupport)
 
 if __name__== "__main__":
     s = time.perf_counter()
-    apriori_naive("../statement/Datasets/toy.dat", 0.125)
+    alternative_miner("../statement/Datasets/accidents.dat", 0.8)
     t = time.perf_counter()
     print(t - s)
     print()
     s = time.perf_counter()
-    #apriori("../statement/Datasets/accidents.dat", 0.8)
+    #apriori("../statement/Datasets/retail.dat", 0.01)
     t = time.perf_counter()
     print(t - s)
     print()
@@ -144,4 +210,4 @@ if __name__== "__main__":
     t = time.perf_counter()
     print(t - s)
 
-    #cProfile.run('apriori("../statement/Datasets/chess.dat", 0.9)')
+    # cProfile.run('alternative_miner("../statement/Datasets/chess.dat", 0.9)')
