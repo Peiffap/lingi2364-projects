@@ -152,8 +152,9 @@ def main(pf=None, nf=None, k=None):
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
+        import cProfile
         a = time.perf_counter()
-        main("../../statement/Datasets/Protein/SRC1521.txt", "../../statement/Datasets/Protein/PKA_group15.txt", 13)
+        main("../../statement/Datasets/Reuters/earn.txt", "../../statement/Datasets/Reuters/acq.txt", 3)
         #main("../statement/Datasets/Test/positive.txt", "../statement/Datasets/Test/negative.txt", 3)
         print(time.perf_counter() - a)
     else:
