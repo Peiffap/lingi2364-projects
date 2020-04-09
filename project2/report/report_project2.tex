@@ -1,0 +1,83 @@
+\documentclass[journal, 9pt]{IEEEtran}
+\usepackage[left=1.25cm,right=1.25cm,top=1.25cm,bottom=1.25cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{minted}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{mathtools}
+\usepackage{color}
+\usepackage{amsthm}
+\usepackage{parskip}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+
+
+
+\linespread{0.9}
+
+\newcommand{\subparagraph}{}
+\usepackage[compact]{titlesec}
+
+\titlespacing{\section}{0pt}{\parskip}{-\parskip}
+\titlespacing{\subsection}{0pt}{\parskip}{-\parskip}
+\titlespacing{\subsubsection}{0pt}{\parskip}{-\parskip}
+
+\usepackage{pgfplots}
+\pgfplotsset{compat=newest}
+\usepgfplotslibrary{groupplots}
+\usepgfplotslibrary{dateplot}
+\usepackage{tikzscale}
+
+\theoremstyle{definition}
+\newtheorem{defn}{Definition}[section]
+
+\usepackage[binary-units=true]{siunitx}
+
+\newcommand{\py}[1]{\mintinline{python}{#1}}
+\newcommand{\java}[1]{\mintinline{java}{#1}}
+\newcommand{\sql}[1]{\mintinline{sql}{#1}}
+
+\renewcommand{\epsilon}{\varepsilon}
+\renewcommand{\theta}{\vartheta}
+\renewcommand{\kappa}{\varkappa}
+\renewcommand{\rho}{\varrho}
+\renewcommand{\phi}{\varphi}
+
+\newcommand{\db}{\mathcal{D}}
+\newcommand{\is}{\mathcal{I}}
+\newcommand{\tr}{\mathcal{T}}
+
+\newcommand{\abs}[1]{|#1|}
+
+\usepackage{hyperref}
+
+\title{Mining Patterns in Data --- Implementing Sequence Mining}
+\author{Gilles Peiffer (24321600), Liliya Semerikova (64811600)}
+\date{April 17, 2020}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+	
+\end{abstract}
+
+\section*{Introduction}
+
+\section*{Conclusion}
+
+\begin{thebibliography}{9}
+	\bibitem{apriori_bodon}
+	Ferenc Bodon, \textit{Surprising Results of Trie-based FIM Algorithms}, \href{http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-126/bodon.pdf}{link}, 2004.
+	\bibitem{apriori_prefix}
+	Gösta Grahne and Jianfei Zhu, \textit{Efficiently Using Prefix-trees in Mining Frequent Itemsets}, \href{http://ceur-ws.org/Vol-90/grahne.pdf}{link}, 2003.
+	\bibitem{eclat}
+	Lars Schmidt-Thieme, \textit{Algorithmic Features of Eclat}, \href{http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-126/schmidtthieme.pdf}{link}, 2004.
+\end{thebibliography}
+
+\end{document}
