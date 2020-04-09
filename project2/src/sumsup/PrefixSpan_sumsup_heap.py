@@ -5,8 +5,6 @@ import sys
 from collections import defaultdict, Counter
 from heapq import heappush, heappushpop, heappop
 
-import time
-
 class Dataset:
     """Utility class to manage a dataset stored in a external file."""
 
@@ -31,7 +29,7 @@ class Dataset:
                     self.transactions.append([])
                     i += 1
         except IOError as e:
-            print("Unable to read dataset file!\n" + e)
+            print(e)
 
         self.transactions = self.transactions[:-1]
 
@@ -89,8 +87,9 @@ def main(pf=None, nf=None, k=None):
         neg_filepath = sys.argv[2] # filepath to negative class file
         k = int(sys.argv[3])
     else:
-        pos_filepath = pf # filepath to positive class file
-        neg_filepath = nf # filepath to negative class file
+        prefix = "../../statement/Datasets/"
+        pos_filepath = prefix + pf # filepath to positive class file
+        neg_filepath = prefix + nf # filepath to negative class file
 
     if k == 0:
         return
@@ -158,9 +157,10 @@ def main(pf=None, nf=None, k=None):
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
+        import time
         a = time.perf_counter()
-        #main("../statement/Datasets/Protein/PKA_group15.txt", "../statement/Datasets/Protein/SRC1521.txt", 14)
-        main("../statement/Datasets/Test/positive.txt", "../statement/Datasets/Test/negative.txt", 3)
+        main("Reuters/earn.txt", "Reuters/acq.txt", 4)
+        #main("Test/positive.txt", "Test/negative.txt", 3)
         print(time.perf_counter() - a)
     else:
         main()
