@@ -2,8 +2,10 @@
 
 import sys
 
-from collections import defaultdict, Counter
-from heapq import heappush, heappushpop, heappop
+from collections import defaultdict
+from heapq import heappush, heappop
+from bisect import bisect_left
+from operator import itemgetter
 
 class Dataset:
     """Utility class to manage a dataset stored in a external file."""
@@ -33,6 +35,7 @@ class Dataset:
 
         self.transactions = self.transactions[:-1]
 
+        # Create wordmap and new db.
         self.wordmap = {}
 
         for doc in self.transactions:
@@ -44,26 +47,29 @@ class Dataset:
             for doc in self.transactions
         ]
 
-        self.invwordmap = self.invert(self.wordmap)
+        self.transactions = [] # Delete useless db.
 
-        self.results = []
+        self.invwordmap = invert(self.wordmap)
 
-    def invert(self, d):
-        return {v: k for k, v in d.items()}
+        self.wordmap = {} # Delete useless wordmap.
 
-    def trans_num(self):
-        """Returns the number of transactions in the dataset"""
-        return len(self.transactions)
+        self.results = [] # Result tuples (sup, patt, matches)
+        self.supdict = defaultdict(int) # Current dictionary of top-k supports.
 
-    def get_transaction(self, i):
-        """Returns the transaction at index i as an array"""
-        return self.transactions[i]
 
+def invert(d):
+    """
+    Inverts a dictionary.
+    """
+    return {v: k for k, v in d.items()}
+
+
+# Functions to help with computing new matches in PrefixSpan.
 def invertedindex(seqs, entries):
     index = defaultdict(list)
 
     for k, seq in enumerate(seqs):
-        i, lastpos = entries[k] if entries else (k, -1)
+        i, lastpos = entries[k]
 
         for p, item in enumerate(seq, start=(lastpos + 1)):
             l = index[item]
@@ -81,86 +87,100 @@ def nextentries(data, entries):
         entries
     )
 
-def main(pf=None, nf=None, k=None):
+
+def main(pf=None, nf=None, k=None, verbose=True):
     if pf is None or nf is None or k is None:
         pos_filepath = sys.argv[1] # filepath to positive class file
         neg_filepath = sys.argv[2] # filepath to negative class file
         k = int(sys.argv[3])
     else:
-        prefix = "../../statement/Datasets/"
+        if verbose:
+            prefix = "../../statement/Datasets/"
+        else:
+            prefix = "../statement/Datasets/"
         pos_filepath = prefix + pf # filepath to positive class file
         neg_filepath = prefix + nf # filepath to negative class file
 
-    if k == 0:
+    if k == 0: # Corner case.
         return
 
+    # Initialize db.
     data = Dataset(pos_filepath, neg_filepath)
 
-    key = bound = lambda patt, matches: len(matches)
 
-    def nsupp():
-        if data.results == []:
-            return 0, 0
-        vals = Counter([i[0] for i in data.results]).values()
-        return len(vals), list(vals)[0]
+    def signsup(matches):
+        """
+        Compute positive and negative support.
+        """
+        pos_support = bisect_left(matches, (data.npos, -1))
+        neg_support = len(matches) - pos_support
+        return pos_support, neg_support
 
-    def topk_canpass(sup):
-        return nsupp()[0] == k and sup < data.results[0][0]
 
-    def topk_verify(patt, matches):
-        sup = key(patt, matches)
+    def bound_and_key(matches):
+        """
+        Compute value for the bound and key (total support in this case).
+        """
+        return len(matches), len(matches)
 
-        if topk_canpass(sup):
+
+    def topk_verify(patt, matches, sup):
+        """
+        Try to insert pattern in results.
+        """
+        # If worse than kth best, ignore pattern.
+        # For support score, this does not matter, but for other scoring functions it does.
+        if len(data.supdict) == k and sup < data.results[0][0]:
             return
 
-        ns = nsupp()
-        if ns[0] <= k:
-            heappush(data.results, (sup, patt, matches))
-        else:
-            heappushpop(data.results, (sup, patt, matches))
-            ns = nsupp()
-            if ns[0] > k:
-                ind = ns[1]
-                while ind > 0:
-                    heappop(data.results)
-                    ind -= 1
+        # Push new tuple, and remove old tuples if they become worse than kth best.
+        heappush(data.results, (sup, patt, matches))
+        data.supdict[sup] += 1
+        if len(data.supdict) > k:
+            ind = data.supdict[data.results[0][0]]
+            del data.supdict[data.results[0][0]]
+            while ind > 0:
+                heappop(data.results)
+                ind -= 1
 
-    def topk_rec(patt, matches):
-        if len(patt) > 0:
-            topk_verify(patt, matches)
+    def topk_rec(patt, matches, sup):
+        """
+        Main function, calls itself recursively in a DFS manner.
+        """
+        if patt != []:
+            topk_verify(patt, matches, sup)
 
+        # Update list of matches.
         occurs = nextentries(data.db, matches)
 
-        for newitem, newmatches in sorted(
-                occurs.items(),
-                key=lambda x: key(patt + [x[0]], x[1]),
-                reverse=True
-            ):
-            newpatt = patt + [newitem]
-
-            if topk_canpass(bound(newpatt, newmatches)):
+        # New search directions.
+        new = [(x[0], x[1], bound_and_key(x[1])) for x in occurs.items()]
+        new.sort(key=itemgetter(2), reverse=True) # Sort on support.
+        for newitem, newmatches, (bnd, key) in new:
+            # If the support is lower than the existing kth best, prune search tree.
+            if len(data.supdict) == k and bnd < data.results[0][0]:
                 break
 
-            topk_rec(newpatt, newmatches)
+            newpatt = patt + [newitem] # Construct new pattern.
 
-    topk_rec([], [(i, -1) for i in range(len(data.db))])
+            topk_rec(newpatt, newmatches, key) # Recursive call.
 
+
+    topk_rec([], [(i, -1) for i in range(len(data.db))], 0) # Last arg ignored.
+
+    # Print results.
     for (sup, patt, matches) in data.results:
-        pos_support = 0
-        neg_support = 0
-        for (tr, _) in matches:
-            if tr < data.npos:
-                pos_support += 1
-            else:
-                neg_support += 1
-        print("[{}] {} {} {}".format(', '.join((data.invwordmap[i] for i in patt)), pos_support, neg_support, sup))
+        p, n = signsup(matches)
+        if verbose:
+            print("[{}] {} {} {}".format(', '.join((data.invwordmap[i] for i in patt)), p, n, sup))
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         import time
         a = time.perf_counter()
-        main("Reuters/earn.txt", "Reuters/acq.txt", 4)
-        #main("Test/positive.txt", "Test/negative.txt", 3)
+        #main("Reuters/earn.txt", "Reuters/acq.txt", 4)
+        main("Test/positive.txt", "Test/negative.txt", 3)
         print(time.perf_counter() - a)
     else:
         main()

@@ -32,12 +32,13 @@ class Dataset:
                     self.transactions.append([])
                     i += 1
         except IOError as e:
-            print("Unable to read dataset file!\n" + e)
+            print(e)
 
         self.transactions = self.transactions[:-1]
 
         self.translen = [len(i) for i in self.transactions]
 
+        # Create new wordmap and db.
         self.wordmap = {}
 
         for doc in self.transactions:
@@ -65,10 +66,47 @@ class Dataset:
 
         self.seenpatterns = []
 
-        self.k = 0
+        self.pn = [[round(self.information_gain(p, n), 5) for n in range(self.nneg+1)] for p in range(self.npos+1)]
+
+        self.cumulativepn = [row[:] for row in self.pn]
+        for i in range(self.npos+1):
+            for j in range(self.nneg+1):
+                if i == j == 0:
+                    self.cumulativepn[i][j] = self.pn[i][j]
+                elif j == 0:
+                    self.cumulativepn[i][j] = max(self.cumulativepn[i-1][j], self.pn[i][j])
+                elif i == 0:
+                    self.cumulativepn[i][j] = max(self.cumulativepn[i][j-1], self.pn[i][j])
+                else:
+                    self.cumulativepn[i][j] = max(self.cumulativepn[i][j-1], self.cumulativepn[i-1][j], self.pn[i][j])
+
+
+    def entropy(self, x):
+        """
+        Compute entropy.
+        """
+        if x <= 0 or x >= 1:
+            return 0
+        return -x * log2(x) - (1 - x) * log2(1 - x)
+
+
+    def information_gain(self, p, n):
+        """
+        Compute information gain.
+        """
+        P = self.npos
+        N = self.nneg
+        if p == P and n == N or p == n == 0:
+            return 0
+        return self.entropy(P / self.cmn) - (p + n) * self.entropy(p / (p + n)) / self.cmn - (self.cmn - p - n) * self.entropy((P - p) / (self.cmn - p - n)) / self.cmn
+
 
 def invert(d):
-        return {v: k for k, v in d.items()}
+    """
+    Inverts a dictionary.
+    """
+    return {v: k for k, v in d.items()}
+
 
 def invertedindex(seqs, entries):
     index = defaultdict(list)
@@ -92,13 +130,17 @@ def nextentries(data, entries):
         entries
     )
 
-def main(pf=None, nf=None, k=None):
+
+def main(pf=None, nf=None, k=None, verbose=True):
     if pf is None or nf is None or k is None:
         pos_filepath = sys.argv[1] # filepath to positive class file
         neg_filepath = sys.argv[2] # filepath to negative class file
         k = int(sys.argv[3])
     else:
-        prefix = "../../statement/Datasets/"
+        if verbose:
+            prefix = "../../../statement/Datasets/"
+        else:
+            prefix = "../statement/Datasets/"
         pos_filepath = prefix + pf # filepath to positive class file
         neg_filepath = prefix + nf # filepath to negative class file
 
@@ -107,30 +149,23 @@ def main(pf=None, nf=None, k=None):
 
     data = Dataset(pos_filepath, neg_filepath)
 
-    def entropy(x):
-        if x == 0 or x == 1:
-            return 0
-        return -x * log2(x) - (1 - x) * log2(1 - x)
 
     def bound_and_key(matches):
         """
         Computes bound and value for information gain.
-
-        Bound equals 1 because no scipy.optimize.
         """
         p, n = signsup(matches)
-        P = data.npos
-        N = data.nneg
-        if p == P and n == N:
-            return 1, 0, p, n
-        ig = entropy(P / data.cmn) - (p + n) * entropy(p / (p + n)) / data.cmn - (data.cmn - p - n) * entropy((P - p) / (data.cmn - p - n)) / data.cmn
-        return 1, round(ig, 5), p, n
+        return data.cumulativepn[p][n], data.pn[p][n], p, n
 
 
     def signsup(matches):
+        """
+        Computes the supports in the positive and negative classes.
+        """
         pos_support = bisect_left(matches, (data.npos, -1))
         neg_support = len(matches) - pos_support
         return pos_support, neg_support
+
 
     def contains(patt1, patt2):
         """
@@ -146,7 +181,11 @@ def main(pf=None, nf=None, k=None):
                     break
         return True
 
+
     def isclosed(patt, p, n):
+        """
+        Determines whether a given pattern is closed.
+        """
         for tup in data.results:
             if tup[3] == p and tup[4] == n and len(tup[1]) > len(patt) and contains(tup[1], patt):
                 # If contained in existing pattern, not closed.
@@ -155,7 +194,11 @@ def main(pf=None, nf=None, k=None):
         # Not contained in any patterns.
         return True
 
+
     def closedcanprune(patt, ps, ns):
+        """
+        Determines whether the search tree can be pruned.
+        """
         for tup in data.seenpatterns:
             if tup[1] == ps and tup[2] == ns:
                 if contains(tup[0], patt):
@@ -165,16 +208,26 @@ def main(pf=None, nf=None, k=None):
         # Not contained in any patterns.
         return False
 
+
     def clospan_score(matches, npos):
+        """
+        Compute CloSpan score in both datasets.
+        """
         pscore = sum([data.translen[t] - p + 1 for (t, p) in matches[:npos]])
         nscore = sum([data.translen[t] - p + 1 for (t, p) in matches[npos:]])
         return pscore, nscore
 
+
     def topk_verify(patt, matches, sup, p, n, ps, ns):
-        data.seenpatterns.append((patt, ps, ns))
+        """
+        Tries to insert a pattern into the results.
+        """
+        data.seenpatterns.append((patt, ps, ns)) # Add to seen patterns.
+        # If score is bad, ignore pattern.
         if (sup, patt, matches, p, n) in data.results or len(data.supdict) == data.k and sup < data.results[0][0]:
             return
 
+        # Push new tuple, and remove old tuples if they become worse than kth best.
         heappush(data.results, (sup, patt, matches, p, n))
         data.supdict[sup] += 1
         if len(data.supdict) > data.k:
@@ -184,34 +237,42 @@ def main(pf=None, nf=None, k=None):
                 heappop(data.results)
                 ind -= 1
 
+
     def topk_rec(patt, matches, sup, p, n, ps, ns):
-        if len(patt) > 0:
+        """
+        Main function, calls itself recursively.
+        """
+        if patt != []:
             topk_verify(patt, matches, sup, p, n, ps, ns)
 
+        # Compute new matches.
         occurs = nextentries(data.db, matches)
 
-        new = [(x[0], x[1], (bound_and_key(x[1]))) for x in occurs.items()]
-        new.sort(key=itemgetter(2), reverse=True)
+        new = [(x[0], x[1], bound_and_key(x[1])) for x in occurs.items()]
+        new.sort(key=itemgetter(2), reverse=True) # Sort on bound, then value of info gain.
         for newitem, newmatches, (bnd, sup, p, n) in new:
+            # Try to prune search tree if bound is sufficiently low.
             if len(data.supdict) == data.k and bnd < data.results[0][0]:
                 break
-
             newpatt = patt + [newitem]
 
+            # Try to prune search tree using CloSpan score.
             ps, ns = clospan_score(newmatches, p)
             if closedcanprune(newpatt, ps, ns):
                 continue
 
             topk_rec(newpatt, newmatches, sup, p, n, ps, ns)
 
+
     for j in range(1, k+1):
         data.k = j # This loop stops the miner from getting stuck on large datasets.
         data.seenpatterns = []
-        topk_rec([], [(i, -1) for i in range(len(data.db))], 0, 0, 0, 0, 0)
+        topk_rec([], [(i, -1) for i in range(len(data.db))], 0, 0, 0, 0, 0) # Last arguments ignored.
 
     for (sup, patt, _, p, n) in data.results:
-        if isclosed(patt, p, n):
+        if isclosed(patt, p, n) and verbose: # Post-processing phase.
             print("[{}] {} {} {}".format(', '.join((data.invwordmap[i] for i in patt)), p, n, sup))
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
@@ -220,7 +281,7 @@ if __name__ == "__main__":
         a = time.perf_counter()
         #cProfile.run('main("Reuters/earn.txt", "Reuters/acq.txt", 10)')
         #cProfile.run('main("Protein/SRC1521.txt", "Protein/PKA_group15.txt", 10)')
-        main("Test/positive.txt", "Test/negative.txt", 1)
+        main("Test/positive.txt", "Test/negative.txt", 6)
         print(time.perf_counter() - a)
     else:
         main()

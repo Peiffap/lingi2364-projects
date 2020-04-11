@@ -31,12 +31,13 @@ class Dataset:
                     self.transactions.append([])
                     i += 1
         except IOError as e:
-            print("Unable to read dataset file!\n" + e)
+            print(e)
 
         self.transactions = self.transactions[:-1]
 
         self.translen = [len(i) for i in self.transactions]
 
+        # Create wordmap and new db.
         self.wordmap = {}
 
         for doc in self.transactions:
@@ -69,8 +70,13 @@ class Dataset:
 
         self.k = 0
 
+
 def invert(d):
-        return {v: k for k, v in d.items()}
+    """
+    Inverts a dictionary.
+    """
+    return {v: k for k, v in d.items()}
+
 
 def invertedindex(seqs, entries):
     index = defaultdict(list)
@@ -94,13 +100,17 @@ def nextentries(data, entries):
         entries
     )
 
-def main(pf=None, nf=None, k=None):
+
+def main(pf=None, nf=None, k=None, verbose=True):
     if pf is None or nf is None or k is None:
         pos_filepath = sys.argv[1] # filepath to positive class file
         neg_filepath = sys.argv[2] # filepath to negative class file
         k = int(sys.argv[3])
     else:
-        prefix = "../../statement/Datasets/"
+        if verbose:
+            prefix = "../../statement/Datasets/"
+        else:
+            prefix = "../statement/Datasets/"
         pos_filepath = prefix + pf # filepath to positive class file
         neg_filepath = prefix + nf # filepath to negative class file
 
@@ -108,6 +118,7 @@ def main(pf=None, nf=None, k=None):
         return
 
     data = Dataset(pos_filepath, neg_filepath)
+
 
     def bound_and_key(matches):
         """
@@ -131,9 +142,13 @@ def main(pf=None, nf=None, k=None):
 
 
     def signsup(matches):
+        """
+        Computes the supports in the positive and negative classes.
+        """
         pos_support = bisect_left(matches, (data.npos, -1))
         neg_support = len(matches) - pos_support
         return pos_support, neg_support
+
 
     def contains(patt1, patt2):
         """
@@ -149,7 +164,11 @@ def main(pf=None, nf=None, k=None):
                     break
         return True
 
+
     def isclosed(patt, p, n):
+        """
+        Determines whether a given pattern is closed.
+        """
         for tup in data.results:
             if tup[3] == p and tup[4] == n and len(tup[1]) > len(patt) and contains(tup[1], patt):
                 # If contained in existing pattern, not closed.
@@ -158,7 +177,11 @@ def main(pf=None, nf=None, k=None):
         # Not contained in any patterns.
         return True
 
+
     def closedcanprune(patt, ps, ns):
+        """
+        Determines whether the search tree can be pruned.
+        """
         for tup in data.seenpatterns:
             if tup[1] == ps and tup[2] == ns:
                 if contains(tup[0], patt):
@@ -168,16 +191,26 @@ def main(pf=None, nf=None, k=None):
         # Not contained in any patterns.
         return False
 
+
     def clospan_score(matches, npos):
+        """
+        Compute CloSpan score in both datasets.
+        """
         pscore = sum([data.translen[t] - p + 1 for (t, p) in matches[:npos]])
         nscore = sum([data.translen[t] - p + 1 for (t, p) in matches[npos:]])
         return pscore, nscore
 
+
     def topk_verify(patt, matches, sup, p, n, ps, ns):
-        data.seenpatterns.append((patt, ps, ns))
+        """
+        Tries to insert a pattern into the results.
+        """
+        data.seenpatterns.append((patt, ps, ns)) # Add to seen patterns.
+        # If score is bad, ignore pattern.
         if (sup, patt, matches, p, n) in data.results or len(data.supdict) == data.k and sup < data.results[0][0]:
             return
 
+        # Push new tuple, and remove old tuples if they become worse than kth best.
         heappush(data.results, (sup, patt, matches, p, n))
         data.supdict[sup] += 1
         if len(data.supdict) > data.k:
@@ -187,34 +220,42 @@ def main(pf=None, nf=None, k=None):
                 heappop(data.results)
                 ind -= 1
 
+
     def topk_rec(patt, matches, sup, p, n, ps, ns):
-        if len(patt) > 0:
+        """
+        Main function, calls itself recursively.
+        """
+        if patt != []:
             topk_verify(patt, matches, sup, p, n, ps, ns)
 
+        # Compute new matches.
         occurs = nextentries(data.db, matches)
 
-        new = [(x[0], x[1], (bound_and_key(x[1]))) for x in occurs.items()]
-        new.sort(key=itemgetter(2), reverse=True)
+        new = [(x[0], x[1], bound_and_key(x[1])) for x in occurs.items()]
+        new.sort(key=itemgetter(2), reverse=True) # Sort on bound, then value of AbsWRAcc.
         for newitem, newmatches, (bnd, sup, p, n) in new:
+            # Try to prune search tree if bound is sufficiently low.
             if len(data.supdict) == data.k and bnd < data.results[0][0]:
                 break
-
             newpatt = patt + [newitem]
 
+            # Try to prune search tree using CloSpan score.
             ps, ns = clospan_score(newmatches, p)
             if closedcanprune(newpatt, ps, ns):
                 continue
 
             topk_rec(newpatt, newmatches, sup, p, n, ps, ns)
 
+
     for j in range(1, k+1):
         data.k = j # This loop stops the miner from getting stuck on large datasets.
         data.seenpatterns = []
-        topk_rec([], [(i, -1) for i in range(len(data.db))], 0, 0, 0, 0, 0)
+        topk_rec([], [(i, -1) for i in range(len(data.db))], 0, 0, 0, 0, 0) # Last arguments ignored.
 
     for (sup, patt, _, p, n) in data.results:
-        if isclosed(patt, p, n):
+        if isclosed(patt, p, n) and verbose: # Post-processing phase.
             print("[{}] {} {} {}".format(', '.join((data.invwordmap[i] for i in patt)), p, n, sup))
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:

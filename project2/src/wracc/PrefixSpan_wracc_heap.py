@@ -35,6 +35,7 @@ class Dataset:
 
         self.transactions = self.transactions[:-1]
 
+        # Create wordmap and new db.
         self.wordmap = {}
 
         for doc in self.transactions:
@@ -55,8 +56,8 @@ class Dataset:
 
         self.results = []
 
+        # Some constants to reuse.
         self.nneg = len(self.db) - self.npos
-
         self._cmn = 1 / (self.npos + self.nneg)**2
         self.cmnp = self._cmn * self.nneg
         self.cmnn = self._cmn * self.npos
@@ -65,9 +66,15 @@ class Dataset:
 
         self.k = 0
 
-def invert(d):
-        return {v: k for k, v in d.items()}
 
+def invert(d):
+    """
+    Inverts a dictionary.
+    """
+    return {v: k for k, v in d.items()}
+
+
+# Functions to help compute new PrefixSpan matches.
 def invertedindex(seqs, entries):
     index = defaultdict(list)
 
@@ -90,13 +97,17 @@ def nextentries(data, entries):
         entries
     )
 
-def main(pf=None, nf=None, k=None):
+
+def main(pf=None, nf=None, k=None, verbose=True):
     if pf is None or nf is None or k is None:
         pos_filepath = sys.argv[1] # filepath to positive class file
         neg_filepath = sys.argv[2] # filepath to negative class file
         k = int(sys.argv[3])
     else:
-        prefix = "../../statement/Datasets/"
+        if verbose:
+            prefix = "../../statement/Datasets/"
+        else:
+            prefix = "../statement/Datasets/"
         pos_filepath = prefix + pf # filepath to positive class file
         neg_filepath = prefix + nf # filepath to negative class file
 
@@ -104,6 +115,7 @@ def main(pf=None, nf=None, k=None):
         return
 
     data = Dataset(pos_filepath, neg_filepath)
+
 
     def bound_and_key(matches):
         """
@@ -118,15 +130,25 @@ def main(pf=None, nf=None, k=None):
             val = data.cmnp * p
             return round(val, 5), round(val - data.cmnn * n, 5)
 
+
     def signsup(matches):
+        """
+        Compute positive and negative support.
+        """
         pos_support = bisect_left(matches, (data.npos, -1))
         neg_support = len(matches) - pos_support
         return pos_support, neg_support
 
+
     def topk_verify(patt, matches, sup):
+        """
+        Try to insert pattern in results.
+        """
+        # Check whether pattern has a bad score and needs to be skipped.
         if (sup, patt, matches) in data.results or len(data.supdict) == data.k and sup < data.results[0][0]:
             return
 
+        # Push new tuple, and remove old tuples if they become worse than kth best.
         heappush(data.results, (sup, patt, matches))
         data.supdict[sup] += 1
         if len(data.supdict) > data.k:
@@ -136,20 +158,28 @@ def main(pf=None, nf=None, k=None):
                 heappop(data.results)
                 ind -= 1
 
+
     def topk_rec(patt, matches, sup):
-        if len(patt) > 0:
+        """
+        Main function, calls itself recursively in a DFS manner.
+        """
+        if patt != []:
             topk_verify(patt, matches, sup)
 
+        # Update list of matches.
         occurs = nextentries(data.db, matches)
 
+        # New search directions.
         new = [(x[0], x[1], (bound_and_key(x[1]))) for x in occurs.items()]
         new.sort(key=itemgetter(2), reverse=True)
         for newitem, newmatches, (bnd, sup) in new:
+            # If no higher value can be attained in this branch, prune.
             if len(data.supdict) == data.k and bnd < data.results[0][0]:
                 break
-            newpatt = patt + [newitem]
+            newpatt = patt + [newitem] # New pattern.
 
-            topk_rec(newpatt, newmatches, sup)
+            topk_rec(newpatt, newmatches, sup) # Recursive call.
+
 
     for j in range(1, k+1):
         data.k = j # This loop stops the miner from getting stuck on large datasets.
@@ -157,16 +187,18 @@ def main(pf=None, nf=None, k=None):
 
     for (sup, patt, matches) in data.results:
         pos_support, neg_support = signsup(matches)
-        print("[{}] {} {} {}".format(', '.join((data.invwordmap[i] for i in patt)), pos_support, neg_support, sup))
+        if verbose:
+            print("[{}] {} {} {}".format(', '.join((data.invwordmap[i] for i in patt)), pos_support, neg_support, sup))
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         import cProfile
         import time
         a = time.perf_counter()
-        cProfile.run('main("Reuters/earn.txt", "Reuters/acq.txt", 10)')
+        #cProfile.run('main("Reuters/earn.txt", "Reuters/acq.txt", 10)')
         #cProfile.run('main("Protein/SRC1521.txt", "Protein/PKA_group15.txt", 95)')
-        #main("Test/positive.txt", "Test/negative.txt", 3)
+        main("Test/positive.txt", "Test/negative.txt", 3)
         print(time.perf_counter() - a)
     else:
         main()

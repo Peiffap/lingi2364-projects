@@ -3,12 +3,8 @@
 import sys
 
 from collections import defaultdict
-from itertools import count
 from bisect import insort, bisect_left
 from operator import itemgetter
-import cProfile
-
-import time
 
 class Dataset:
     """Utility class to manage a dataset stored in a external file."""
@@ -38,19 +34,22 @@ class Dataset:
 
         self.transactions = self.transactions[:-1]
 
+        self.wordmap = {} # Map symbols to integers.
+
+        # Create wordmap and new db.
         self.wordmap = {}
 
-        c = count()
         for doc in self.transactions:
             for word in doc:
                 if not word in self.wordmap:
-                    self.wordmap[word] = next(c)
+                    self.wordmap[word] = len(self.wordmap)
+
         self.db = [
             [self.wordmap[w] for w in doc]
             for doc in self.transactions
         ]
 
-        self.invwordmap = self.invert(self.wordmap)
+        self.invwordmap = invert(self.wordmap)
 
         # Save memory
         self.wordmap = {}
@@ -68,9 +67,15 @@ class Dataset:
 
         self.k = 0
 
-    def invert(self, d):
-        return {v: k for k, v in d.items()}
 
+def invert(d):
+    """
+    Inverts a dictionary.
+    """
+    return {v: k for k, v in d.items()}
+
+
+# Functions to help compute the projected db for PrefixSpan.
 def invertedindex(seqs, entries):
     index = defaultdict(list)
 
@@ -92,20 +97,26 @@ def nextentries(data, entries):
         entries
     )
 
-def main(pf=None, nf=None, k=None):
+
+def main(pf=None, nf=None, k=None, verbose=True):
     if pf is None or nf is None or k is None:
         pos_filepath = sys.argv[1] # filepath to positive class file
         neg_filepath = sys.argv[2] # filepath to negative class file
         k = int(sys.argv[3])
     else:
-        prefix = "../../statement/Datasets/"
+        if verbose:
+            prefix = "../../statement/Datasets/"
+        else:
+            prefix = "../statement/Datasets/"
         pos_filepath = prefix + pf # filepath to positive class file
         neg_filepath = prefix + nf # filepath to negative class file
 
     if k == 0:
         return
 
+    # Initialize data.
     data = Dataset(pos_filepath, neg_filepath)
+
 
     def bound_and_key(matches):
         """
@@ -120,6 +131,7 @@ def main(pf=None, nf=None, k=None):
             val = data.cmnp * p
             return round(val, 5), round(val - data.cmnn * n, 5)
 
+
     def signsup(matches):
         """
         Computes the supports in the positive and negative classes.
@@ -128,10 +140,12 @@ def main(pf=None, nf=None, k=None):
         neg_support = len(matches) - pos_support
         return pos_support, neg_support
 
+
     def topk_verify(patt, matches, sup):
         """
         Tries to insert a new pattern into the results.
         """
+        # If pattern has a bad score, ignore it.
         if (sup, patt, matches) in data.results or len(data.supdict) == data.k and sup < data.results[0][0]:
             return
 
@@ -144,22 +158,30 @@ def main(pf=None, nf=None, k=None):
             del data.supdict[data.results[0][0]]
             data.results = data.results[val:]
 
+        # Insert pattern preserving sorted property.
         insort(data.results, (sup, patt, matches))
 
+
     def topk_rec(patt, matches, sup):
+        """
+        Main function, calls itself recursively.
+        """
         if patt != []:
             topk_verify(patt, matches, sup)
 
+        # Compute next matches.
         occurs = nextentries(data.db, matches)
 
         new = [(x[0], x[1], bound_and_key(x[1])) for x in occurs.items()]
         new.sort(key=itemgetter(2), reverse=True) # Sort on bound, then value of WRAcc.
         for newitem, newmatches, (bnd, sup) in new:
+            # If possible, prune search tree based on bound.
             if len(data.supdict) == data.k and bnd < data.results[0][0]:
                 break
             newpatt = patt + [newitem]
 
             topk_rec(newpatt, newmatches, sup)
+
 
     for j in range(1, k+1):
         data.k = j # This loop stops the miner from getting stuck on large datasets.
@@ -167,14 +189,18 @@ def main(pf=None, nf=None, k=None):
 
     for (sup, patt, matches) in data.results:
         pos_supp, neg_supp = signsup(matches)
-        print("[{}] {} {} {}".format(', '.join((data.invwordmap[i] for i in patt)), pos_supp, neg_supp, sup))
+        if verbose:
+            print("[{}] {} {} {}".format(', '.join((data.invwordmap[i] for i in patt)), pos_supp, neg_supp, sup))
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
+        import time
+        import cProfile
         a = time.perf_counter()
         #cProfile.run('main("Reuters/earn.txt", "Reuters/acq.txt", 10)')
-        cProfile.run('main("Protein/SRC1521.txt", "Protein/PKA_group15.txt", 95)')
-        #main("Test/positive.txt", "Test/negative.txt", 3)
+        #cProfile.run('main("Protein/SRC1521.txt", "Protein/PKA_group15.txt", 95)')
+        main("Test/positive.txt", "Test/negative.txt", 3)
         print(time.perf_counter() - a)
     else:
         main()
