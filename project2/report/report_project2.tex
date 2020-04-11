@@ -1,39 +1,28 @@
-\documentclass[journal, 9pt]{IEEEtran}
-\usepackage[left=1.25cm,right=1.25cm,top=1.25cm,bottom=1.25cm]{geometry}
+\documentclass{sigkddExp}
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
+\usepackage{csquotes}
 \usepackage{minted}
 \usepackage{booktabs}
 \usepackage{amsmath}
 \usepackage{float}
 \usepackage{mathtools}
 \usepackage{color}
-\usepackage{amsthm}
-\usepackage{parskip}
 \usepackage{graphicx}
-\usepackage{epstopdf}
 \usepackage{amssymb}
 \usepackage{mathrsfs}
-
-
-
-\linespread{0.9}
-
-\newcommand{\subparagraph}{}
-\usepackage[compact]{titlesec}
-
-\titlespacing{\section}{0pt}{\parskip}{-\parskip}
-\titlespacing{\subsection}{0pt}{\parskip}{-\parskip}
-\titlespacing{\subsubsection}{0pt}{\parskip}{-\parskip}
 
 \usepackage{pgfplots}
 \pgfplotsset{compat=newest}
 \usepgfplotslibrary{groupplots}
 \usepgfplotslibrary{dateplot}
 \usepackage{tikzscale}
+\usepackage[backend=biber, style=trad-abbrv]{biblatex}
+\makeatletter
+\def\blx@maxline{77}
+\makeatother
 
-\theoremstyle{definition}
-\newtheorem{defn}{Definition}[section]
+\addbibresource{bibliography.bib}
 
 \usepackage[binary-units=true]{siunitx}
 
@@ -55,8 +44,42 @@
 
 \usepackage{hyperref}
 
-\title{Mining Patterns in Data --- Implementing Sequence Mining}
-\author{Gilles Peiffer (24321600), Liliya Semerikova (64811600)}
+\newcommand{\ps}{\textsf{PrefixSpan}}
+\newcommand{\cs}{\textsf{CloSpan}}
+\newcommand{\spade}{\textsf{SPADE}}
+
+\newcommand{\wracc}{\mathrm{WRAcc}}
+\newcommand{\abswracc}{\mathrm{AbsWRAcc}}
+\newcommand{\ig}{\mathrm{IG}}
+\newcommand{\imp}{\mathrm{imp}}
+
+% Setup the mathb font (from mathabx.sty)
+\DeclareFontFamily{U}{mathb}{\hyphenchar\font45}
+\DeclareFontShape{U}{mathb}{m}{n}{
+	<5> <6> <7> <8> <9> <10> gen * mathb
+	<10.95> mathb10 <12> <14.4> <17.28> <20.74> <24.88> mathb12
+}{}
+\DeclareSymbolFont{mathb}{U}{mathb}{m}{n}
+
+% Define a sqsupseteq character from that font (from mathabx.dcl)
+
+\DeclareMathSymbol{\sqsupsetneq}    {3}{mathb}{"89}
+
+\numberofauthors{2}
+
+\title{Mining Patterns in Data}
+\subtitle{Implementing Sequence Mining}
+\author{
+\alignauthor Gilles Peiffer (23421600)\\
+	\affaddr{Université catholique de Louvain}\\
+	\affaddr{Place de l'Université 1}\\
+	\affaddr{Louvain-la-Neuve, Belgium}\\
+	\email{gilles.peiffer@student.uclouvain.be}
+\alignauthor Liliya Semerikova (64811600)\\
+	\affaddr{Université catholique de Louvain}\\
+	\affaddr{Place de l'Université 1}\\
+	\affaddr{Louvain-la-Neuve, Belgium}\\
+	\email{liliya.semerikova@student.uclouvain.be}}
 \date{April 17, 2020}
 
 \begin{document}
@@ -64,20 +87,116 @@
 \maketitle
 
 \begin{abstract}
+	The following paper contains a detailed analysis of the performance and results of using various sequential pattern mining algorithms to fulfill several important tasks in the field of data mining.
+	In a first part of the paper, algorithms existing in the literature are described, which are then compared on different tasks.
+	The second part of the paper looks at the results of these mining tasks and gathers insights based on them.
 	
+	\keywords Data mining, machine learning, top-\(k\) frequent pattern, sequential pattern, closed pattern, supervised learning, performance analysis.
 \end{abstract}
 
-\section*{Introduction}
+\section{Introduction}
+Frequent sequential pattern mining is an active area of research in data mining with broad applications.
+Finding efficient algorithms for this task is thus majorly important, and with the rise of machine learning techniques such as supervised learning, it is interesting to consider which algorithms are able to combine both tasks well.
 
-\section*{Conclusion}
+Additionally, some large datasets contain a lot of redundant information: to take a pathological example, consider the database made of the single sequence \(\langle (a_1)(a_2) \dots (a_{100}) \rangle\).
+With a minimum support of 1, it will generate \(2^{100} - 1\) frequent subsequences, all of which are redundant except for the last one because they have the same support.
+For this reason, we also consider algorithms which perform well when mining closed sequential patterns.
 
-\begin{thebibliography}{9}
-	\bibitem{apriori_bodon}
-	Ferenc Bodon, \textit{Surprising Results of Trie-based FIM Algorithms}, \href{http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-126/bodon.pdf}{link}, 2004.
-	\bibitem{apriori_prefix}
-	Gösta Grahne and Jianfei Zhu, \textit{Efficiently Using Prefix-trees in Mining Frequent Itemsets}, \href{http://ceur-ws.org/Vol-90/grahne.pdf}{link}, 2003.
-	\bibitem{eclat}
-	Lars Schmidt-Thieme, \textit{Algorithmic Features of Eclat}, \href{http://sunsite.informatik.rwth-aachen.de/Publications/CEUR-WS/Vol-126/schmidtthieme.pdf}{link}, 2004.
-\end{thebibliography}
+\section{Tasks}
+\label{sec:tasks}
+\subsection{Frequent Sequence Mining}
+\label{sec:fsm}
+The goal of this task is, given two datasets of respectively positive and negative examples, to find the top-\(k\) most frequent sequential patterns across both of them.
+If multiple patterns obtain the same total support, all of them should only count for 1 in the value of \(k\).
 
+\subsection{Supervised Sequence Mining}
+\label{sec:ssm}
+In supervised sequence mining, the aim is still to find top-\(k\) most frequent patterns, but with a new scoring function instead of the total support.
+Let \(p(\alpha)\) and \(n(\alpha)\) be the support of sequential pattern \(\alpha\) in both datasets, and \(P\) and \(N\) be the number of transactions in each dataset; in that case, the \emph{weighted relative accuracy} is given by
+\begin{equation}
+\wracc(\alpha) = \frac{PN}{(P + N)^2} \left(\frac{p(\alpha)}{P} - \frac{n(\alpha)}{N}\right).
+\end{equation}
+
+In order to search for frequent patterns efficiently, an upper bounding procedure is necessary.
+By computing this bound, one can prune the search tree as soon as the bound does not exceed or equal the lowest score found amongst the current top-\(k\) sequential patterns.
+It is easy to see that for a sequential pattern \(\beta \sqsupseteq \alpha\), the highest possible \(\wracc\) score that can be attained is bounded by
+\begin{equation}
+\wracc(\beta) \leqslant \frac{N p(\alpha)}{(P + N)^2}, \quad \forall \beta \sqsupseteq \alpha,
+\end{equation}
+where the assumption is made that all transactions containing \(\alpha\) in the positive dataset also contain \(\beta\), yet none of the transactions in the negative dataset do.
+
+\subsection{Supervised Closed Sequence Mining}
+\label{sec:scsm}
+For our purposes, we define a closed sequential pattern \(\alpha\) as a sequence such that for any sequence \(\beta \sqsupsetneq \alpha\), \(p(\alpha) > p(\beta)\) or \(n(\alpha) > n(\beta)\), that is, no supersequence exists such that both have the same support in both datasets.
+
+The task of supervised closed sequence mining is applied using three different scoring functions:
+\begin{itemize}
+	\item The \(\wracc\) scoring function described earlier.
+	\item The \(\abswracc\) scoring function, defined as
+	\begin{equation}
+	\abswracc(\alpha) = \abs{\wracc(\alpha)}.
+	\end{equation}
+	
+	Upper bounding can then be done as follows: for a sequential pattern \(\beta \sqsupseteq \alpha\), the highest possible \(\abswracc\) score that can be attained is bounded by
+	\begin{equation}
+	\abswracc(\beta) \leqslant \frac{\max\{N p(\alpha), P n(\alpha)\}}{(P + N)^2}, \ \forall \beta \sqsupseteq \alpha.
+	\end{equation}
+	\item The information gain function~\cite{Quinlan1986} (where \(p\) and \(n\) are used instead of \(p(\alpha)\) and \(n(\alpha)\), to alleviate notations):
+	\begin{multline}
+	\ig(\alpha) = \imp\left(\frac{P}{P + N}\right) - \frac{p + n}{P + N}\, \imp\left(\frac{p}{p + n}\right) \\
+	{} - \frac{P + N - p - n}{P + N}\, \imp\left(\frac{P - p}{P + N - p - n}\right),
+	\end{multline}
+	where \(\imp\) is the entropy, defined as
+	\begin{equation}
+	\imp(x) = - x \lg x - (1-x) \lg (1-x).
+	\end{equation}
+	
+	Computing a bound for this scoring function is harder to do analytically.
+	To compute the maximum score for a sequential pattern \(\beta \sqsupseteq \alpha\), one has the following relationship:
+	\begin{equation}
+	\ig(\beta) \leqslant \max_{\substack{0 \leqslant \pi \leqslant p(\alpha) \\ 0 \leqslant \nu \leqslant n(\alpha)}} \ig(\pi, \nu), \quad \forall \beta \sqsupseteq \alpha,
+	\end{equation}
+	where we have used another definition of the information gain function directly taking the supports of the sequence as arguments.
+	By precomputing the information gain for all pairs of values, this bound can be computed as a cumulative maximum.
+\end{itemize}
+
+\section{Algorithms}
+Various algorithms and implementations were used to complete the tasks outlined in Section~\ref{sec:tasks}.
+
+\subsection{PrefixSpan}
+The \ps{} algorithm was proposed by Pei et al.~\cite{Pei2001, Pei2004} in order to mine sequential patterns using a pattern-growth approach.
+This algorithm was used for tasks~\ref{sec:fsm} and~\ref{sec:ssm}.
+For our purposes, two implementations of this algorithm were written, one using a priority queue to store the top-\(k\) patterns and one using a sorted list.
+
+For the tasks using alternate scoring functions, the algorithm is ran with a value of \(k\) starting from 1 all the way up to the original value, since this strategy allowed for faster pruning on large datasets; for larger values of \(k\), the algorithm would occasionally insert low-scoring patterns in its results list, which would then prevent the algorithm from efficiently pruning its search tree.
+By using an incremental strategy, we were able to stop this from happening, with minimal overhead on easier datasets.
+
+\subsection{SPADE}
+\textcolor{red}{Attendre que débilemobile termine son code\dots}
+
+\subsection{CloSpan}
+The \cs{} algorithm is an adaptation of \ps{} designed specifically to mine closed sequential patterns proposed by Yan et al.~\cite{Yan2003}, as in task~\ref{sec:scsm}.
+In order to do so, the \cs{} algorithm runs in two phases:
+\begin{itemize}
+	\item A \emph{search} phase, during which \ps{} is run with the additional constraint of computing a score defined as
+	\begin{equation}
+	\sum_{(t, p) \in \db|_\alpha} \db[t] - p + 1,
+	\end{equation}
+	where \(\db|_\alpha\) is the \(\alpha\)-projected database.
+	For any pattern, we check whether a pattern has already been seen that has the same score while also being a supersequence.
+	If so, we cut the search tree and backtrack.
+	\item A \emph{post-processing} phase, where all patterns which are not closed are removed.
+\end{itemize}
+
+As with \ps, in order to avoid exploring the search tree too much because of inefficient bounding, the algorithm is run incrementally.
+
+\section{Performance and Analysis of Resulting Patterns}
+\subsection{Frequent Sequence Mining}
+\subsection{Supervised Sequence Mining}
+\subsection{Supervised Closed Sequence Mining}
+
+
+\section{Conclusion}
+
+\printbibliography
 \end{document}
