@@ -16,8 +16,9 @@ plt.style.use("ggplot")
 if __name__ == "__main__":
     import sumsup.PrefixSpan_sumsup_heap as ps_heap
     import sumsup.PrefixSpan_sumsup_sorted_list as ps_sl
-    algs = [file.main for file in [ps_heap, ps_sl]]
-    names = ['PrefixSpan_heap', 'PrefixSpan_sorted_list']
+    import sumsup.SPADE as spade
+    algs = [file.main for file in [ps_heap, ps_sl, spade]]
+    names = ['PrefixSpan_heap', 'PrefixSpan_sorted_list', 'SPADE']
     datasets = ['Protein', 'Reuters']
     pos_files = ['SRC1521', 'earn']
     neg_files = ['PKA_group15', 'acq']
@@ -32,7 +33,7 @@ if __name__ == "__main__":
         for i in range(len(algs)):
             print()
             alg = algs[i]
-            k = 5
+            k = 1
             while True:
                 try:
                     print("data: %s, alg: %s, k: %g" % (data, names[i], k))
@@ -41,9 +42,9 @@ if __name__ == "__main__":
                         alg("%s/%s.txt" % (data, pos_files[j]), "%s/%s.txt" % (data, neg_files[j]), k, False)
                         e = time.perf_counter()
                     times[data][names[i]].append(e-s)
-                    k += 5
-                except:
-                    print("Timeout")
+                    k *= 2
+                except TimeoutError as e:
+                    print(e)
                     break
 
     pickle.dump(times, open("../report/data/times_sumsup.p", "wb"))
@@ -67,7 +68,7 @@ if __name__ == "__main__":
         for i in range(len(algs)):
             print()
             alg = algs[i]
-            k = 5
+            k = 1
             while True:
                 try:
                     print("data: %s, alg: %s, k: %g" % (data, names[i], k))
@@ -76,9 +77,9 @@ if __name__ == "__main__":
                         alg("%s/%s.txt" % (data, pos_files[j]), "%s/%s.txt" % (data, neg_files[j]), k, False)
                         e = time.perf_counter()
                     times[data][names[i]].append(e-s)
-                    k += 5
-                except:
-                    print("Timeout")
+                    k *= 2
+                except TimeoutError as e:
+                    print(e)
                     break
 
     pickle.dump(times, open("../report/data/times_wracc.p", "wb"))
@@ -102,7 +103,7 @@ if __name__ == "__main__":
         for i in range(len(algs)):
             print()
             alg = algs[i]
-            k = 5
+            k = 1
             while True:
                 try:
                     print("data: %s, alg: %s, k: %g" % (data, names[i], k))
@@ -111,9 +112,9 @@ if __name__ == "__main__":
                         alg("%s/%s.txt" % (data, pos_files[j]), "%s/%s.txt" % (data, neg_files[j]), k, False)
                         e = time.perf_counter()
                     times[data][names[i]].append(e-s)
-                    k += 5
-                except:
-                    print("Timeout")
+                    k *= 2
+                except TimeoutError as e:
+                    print(e)
                     break
 
     pickle.dump(times, open("../report/data/times_closed_wracc.p", "wb"))
@@ -137,7 +138,7 @@ if __name__ == "__main__":
         for i in range(len(algs)):
             print()
             alg = algs[i]
-            k = 5
+            k = 1
             while True:
                 try:
                     print("data: %s, alg: %s, k: %g" % (data, names[i], k))
@@ -146,9 +147,9 @@ if __name__ == "__main__":
                         alg("%s/%s.txt" % (data, pos_files[j]), "%s/%s.txt" % (data, neg_files[j]), k, False)
                         e = time.perf_counter()
                     times[data][names[i]].append(e-s)
-                    k += 5
-                except:
-                    print("Timeout")
+                    k *= 2
+                except TimeoutError as e:
+                    print(e)
                     break
 
     pickle.dump(times, open("../report/data/times_closed_abswracc.p", "wb"))
@@ -156,10 +157,8 @@ if __name__ == "__main__":
 
     import closed_infogain.CloSpan_infogain_heap as cs_heap
     import closed_infogain.CloSpan_infogain_sorted_list as cs_sl
-    import closed_infogain.with_upper_bound.CloSpan_infogain_heap as cs_heap_ub
-    import closed_infogain.with_upper_bound.CloSpan_infogain_sorted_list as cs_sl_ub
-    algs = [file.main for file in [cs_heap, cs_sl, cs_heap_ub, cs_sl_ub]]
-    names = ['CloSpan_heap', 'CloSpan_sorted_list', 'CloSpan_heap_ub', 'CloSpan_sorted_list_ub']
+    algs = [file.main for file in [cs_heap, cs_sl]]
+    names = ['CloSpan_heap', 'CloSpan_sorted_list']
     datasets = ['Protein', 'Reuters']
     pos_files = ['SRC1521', 'earn']
     neg_files = ['PKA_group15', 'acq']
@@ -174,7 +173,7 @@ if __name__ == "__main__":
         for i in range(len(algs)):
             print()
             alg = algs[i]
-            k = 5
+            k = 1
             while True:
                 try:
                     print("data: %s, alg: %s, k: %g" % (data, names[i], k))
@@ -183,9 +182,9 @@ if __name__ == "__main__":
                         alg("%s/%s.txt" % (data, pos_files[j]), "%s/%s.txt" % (data, neg_files[j]), k, False)
                         e = time.perf_counter()
                     times[data][names[i]].append(e-s)
-                    k += 5
-                except:
-                    print("Timeout")
+                    k *= 2
+                except TimeoutError as e:
+                    print(e)
                     break
 
     pickle.dump(times, open("../report/data/times_closed_infogain.p", "wb"))
