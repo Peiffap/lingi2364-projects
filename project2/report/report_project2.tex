@@ -1,7 +1,6 @@
 \documentclass{sigkddExp}
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
-\usepackage{csquotes}
 \usepackage{minted}
 \usepackage{booktabs}
 \usepackage{amsmath}
@@ -41,7 +40,10 @@
 \newcommand{\tr}{\mathcal{T}}
 
 \newcommand{\abs}[1]{|#1|}
-
+\makeatletter
+\@ifundefined{thepage}{\def\thepage{\arabic{page}}}{}%
+\makeatother
+\usepackage{csquotes}
 \usepackage{hyperref}
 
 \newcommand{\ps}{\textsf{PrefixSpan}}
@@ -64,6 +66,12 @@
 % Define a sqsupseteq character from that font (from mathabx.dcl)
 
 \DeclareMathSymbol{\sqsupsetneq}    {3}{mathb}{"89}
+
+\newenvironment{absolutelynopagebreak}
+{\par\nobreak\vfil\penalty0\vfilneg
+	\vtop\bgroup}
+{\par\xdef\tpd{\the\prevdepth}\egroup
+	\prevdepth=\tpd}
 
 \numberofauthors{2}
 
@@ -166,15 +174,18 @@ Various algorithms and implementations were used to complete the tasks outlined 
 \subsection{PrefixSpan}
 The \ps{} algorithm was proposed by Pei et al.~\cite{Pei2001, Pei2004} in order to mine sequential patterns using a pattern-growth approach.
 This algorithm was used for tasks~\ref{sec:fsm} and~\ref{sec:ssm}.
-For our purposes, two implementations of this algorithm were written, one using a priority queue to store the top-\(k\) patterns and one using a sorted list.
+For our purposes, two implementations of this algorithm were written, one using a priority queue or heap to store the top-\(k\) patterns and one using a sorted list.
 
-For the tasks using alternate scoring functions, the algorithm is ran with a value of \(k\) starting from 1 all the way up to the original value, since this strategy allowed for faster pruning on large datasets; for larger values of \(k\), the algorithm would occasionally insert low-scoring patterns in its results list, which would then prevent the algorithm from efficiently pruning its search tree.
+The algorithm is ran with a value of \(k\) starting from 1 all the way up to the original value, since this strategy allowed for faster pruning on large datasets; for larger values of \(k\), the algorithm would occasionally insert low-scoring patterns in its results list, which would then prevent the algorithm from efficiently pruning its search tree.
 By using an incremental strategy, we were able to stop this from happening, with minimal overhead on easier datasets.
 
 \subsection{SPADE}
-\textcolor{red}{Attendre que débilemobile termine son code\dots}
+The \spade algorithm was first proposed by Zaki~\cite{Zaki2001}, to solve the problem of frequent sequence mining.
+For our survey, it was used to solve task~\ref{sec:fsm}.
+It uses a depth-first approach, and is similar to the \textsf{ECLAT} algorithm, also proposed by Zaki~\cite{Zaki2000}.
 
 \subsection{CloSpan}
+\label{sec:clospan}
 The \cs{} algorithm is an adaptation of \ps{} designed specifically to mine closed sequential patterns proposed by Yan et al.~\cite{Yan2003}, as in task~\ref{sec:scsm}.
 In order to do so, the \cs{} algorithm runs in two phases:
 \begin{itemize}
@@ -192,11 +203,177 @@ As with \ps, in order to avoid exploring the search tree too much because of ine
 
 \section{Performance and Analysis of Resulting Patterns}
 \subsection{Frequent Sequence Mining}
-\subsection{Supervised Sequence Mining}
-\subsection{Supervised Closed Sequence Mining}
+Figures~\ref{fig:time_sumsup_reuters} and~\ref{fig:time_sumsup_protein} show a comparison of execution times for the frequent sequence mining tasks, respectively on the ``Reuters'' and ``Protein'' datasets.
+Figures~\ref{fig:size_sumsup_reuters} and~\ref{fig:size_sumsup_protein} compare their maximal memory usage.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_sumsup_reuters.tikz}
+	\caption{Execution time comparison for the ``Reuters'' dataset, for the frequent sequence mining task.}
+	\label{fig:time_sumsup_reuters}
+\end{figure}%
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_sumsup_reuters.tikz}
+	\caption{Maximal memory usage comparison for the ``Reuters'' dataset, for the frequent sequence mining task.}
+	\label{fig:size_sumsup_reuters}
+\end{figure}
 
+By observing the output patterns in this task, one can see that shorter patterns always obtain higher support scores.
+While this can be useful, Section~\ref{sec:perf_ssm} shows that this is very different from the results obtained when trying to obtain information from the patterns that are being selected.
+\subsection{Supervised Sequence Mining}
+\label{sec:perf_ssm}
+Figures~\ref{fig:time_wracc_reuters} and~\ref{fig:time_wracc_protein} show a comparison of execution times for the frequent sequence mining tasks, respectively on the ``Reuters'' and ``Protein'' datasets.
+Figures~\ref{fig:size_wracc_reuters} and~\ref{fig:size_wracc_protein} compare their maximal memory usage.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_wracc_reuters.tikz}
+	\caption{Execution time comparison for the ``Reuters'' dataset, for the supervised sequence mining task.}
+	\label{fig:time_wracc_reuters}
+\end{figure}%
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_wracc_reuters.tikz}
+	\caption{Maximal memory usage comparison for the ``Reuters'' dataset, for the supervised sequence mining task.}
+	\label{fig:size_wracc_reuters}
+\end{figure}
+
+Weighted relative accuracy allows one to only keep those sequences which are strongly represented in the positive dataset, but not in the negative dataset.
+One possible issue with this is that sequences which appear a lot in the negative dataset but not the positive dataset are ignored, despite giving a lot of information.
+\(\abswracc\) and information gain, as explored in Section~\ref{sec:perf_scsm}, can help solve this problem.
+When comparing the results with those of Section~\ref{sec:perf_scsm}, one can also observe a lot of superfluous information is present in the output of the non closed algorithms.
+By only considering closed patterns, this effect can be reduced, as one gets a lossless representation of the dataset.
+\subsection{Supervised Closed Sequence Mining}
+\label{sec:perf_scsm}
+As mentioned in Section~\ref{sec:perf_ssm}, closed patterns are a lossless representation of the dataset.
+Figures~\ref{fig:time_closed_wracc_reuters},~\ref{fig:time_closed_abswracc_reuters}, and~\ref{fig:time_closed_infogain_reuters} give the execution for the three scoring functions for the supervised closed sequence mining task on the ``Reuters'' dataset, while Figures~\ref{fig:size_closed_wracc_reuters},~\ref{fig:size_closed_abswracc_reuters}, and~\ref{fig:size_closed_infogain_reuters} give the maximal memory consumption.
+Figures~\ref{fig:time_closed_wracc_protein} through~\ref{fig:size_closed_infogain_protein} do the same for the ``Protein'' dataset.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_closed_wracc_reuters.tikz}
+	\caption{Execution time comparison for the ``Reuters'' dataset, for the supervised closed sequence mining task with the \(\wracc\) scoring function.}
+	\label{fig:time_closed_wracc_reuters}
+\end{figure}%
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_closed_wracc_reuters.tikz}
+	\caption{Maximal memory usage comparison for the ``Reuters'' dataset, for the supervised closed sequence mining task with the \(\wracc\) scoring function.}
+	\label{fig:size_closed_wracc_reuters}
+\end{figure}
+On the figures for closed sequence mining with the \(\wracc\) scoring function, one can observe that using closed sequences is slightly faster than not doing so, which might be due to the additional pruning of the search tree as described in Section~\ref{sec:clospan}.
+The patterns that are obtained are a subset of the ones obtained previously, when mining non closed sequences as well.
+
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_closed_abswracc_reuters.tikz}
+	\caption{Execution time comparison for the ``Reuters'' dataset, for the supervised closed sequence mining task with the \(\abswracc\) scoring function.}
+	\label{fig:time_closed_abswracc_reuters}
+\end{figure}%
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_closed_abswracc_reuters.tikz}
+	\caption{Maximal memory usage comparison for the ``Reuters'' dataset, for the supervised closed sequence mining task with the \(\abswracc\) scoring function.}
+	\label{fig:size_closed_abswracc_reuters}
+\end{figure}
+Performance-wise, the \(\abswracc\) scoring function does not make a big difference compared to the original \(\wracc\) function, but it is a much better guide in determining whether a given pattern brings a lot of information with regards to either class in the dataset.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_closed_infogain_reuters.tikz}
+	\caption{Execution time comparison for the ``Reuters'' dataset, for the supervised closed sequence mining task with the information gain scoring function.}
+	\label{fig:time_closed_infogain_reuters}
+\end{figure}
+\begin{absolutelynopagebreak}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_closed_infogain_reuters.tikz}
+	\caption{Maximal memory usage comparison for the ``Reuters'' dataset, for the supervised closed sequence mining task with the information gain scoring function.}
+	\label{fig:size_closed_infogain_reuters}
+\end{figure}
+
+As with the \(\abswracc\) scoring function, the information gain is a way of measuring the quality of a pattern in a supervised environment.
+However, performance is a bigger concern in this case, since the bounding procedure on the information gain function, despite being optimal, is not strong enough to prune the search tree very efficiently.
+There is much more fluctuation in the values of the information gain function that with the absolute weighted relative accuracy, and choosing which to use depends strongly on what the user needs.
 
 \section{Conclusion}
+Sequence mining, whether supervised or not, is a hugely important task, with broad applications.
+By combining it with supervised learning, it becomes even more useful, as sequence mining can be used to obtain information about multiple datasets, and to find defining features of each, according to various scoring functions.
+Closed sequence mining is useful in that it provides the user with a lossless representation of the dataset.
+\end{absolutelynopagebreak}
 
+\newpage
 \printbibliography
+
+\appendix
+
+\section{Omitted Figures}
+
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_sumsup_protein.tikz}
+	\caption{Execution time comparison for the ``Protein'' dataset, for the frequent sequence mining task.}
+	\label{fig:time_sumsup_protein}
+\end{figure}
+
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_sumsup_protein.tikz}
+	\caption{Memory usage comparison for the ``Protein'' dataset, for the frequent sequence mining task.}
+	\label{fig:size_sumsup_protein}
+\end{figure}
+
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_wracc_protein.tikz}
+	\caption{Execution time comparison for the ``Protein'' dataset, for the supervised sequence mining task.}
+	\label{fig:time_wracc_protein}
+\end{figure}
+
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_wracc_protein.tikz}
+	\caption{Memory usage comparison for the ``Protein'' dataset, for the supervised sequence mining task.}
+	\label{fig:size_wracc_protein}
+\end{figure}
+
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_closed_wracc_protein.tikz}
+	\caption{Execution time comparison for the ``Protein'' dataset, for the supervised closed sequence mining task with the \(\wracc\) scoring function.}
+	\label{fig:time_closed_wracc_protein}
+\end{figure}
+
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_closed_wracc_protein.tikz}
+	\caption{Maximal memory usage comparison for the ``Protein'' dataset, for the supervised closed sequence mining task with the \(\wracc\) scoring function.}
+	\label{fig:size_closed_wracc_protein}
+\end{figure}
+
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_closed_abswracc_protein.tikz}
+	\caption{Execution time comparison for the ``Protein'' dataset, for the supervised closed sequence mining task with the \(\abswracc\) scoring function.}
+	\label{fig:time_closed_abswracc_protein}
+\end{figure}
+
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_closed_abswracc_protein.tikz}
+	\caption{Maximal memory usage comparison for the ``Protein'' dataset, for the supervised closed sequence mining task with the \(\abswracc\) scoring function.}
+	\label{fig:size_closed_abswracc_protein}
+\end{figure}
+
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/time_closed_infogain_protein.tikz}
+	\caption{Execution time comparison for the ``Protein'' dataset, for the supervised closed sequence mining task with the information gain scoring function.}
+	\label{fig:time_closed_infogain_protein}
+\end{figure}
+
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/size_closed_infogain_protein.tikz}
+	\caption{Maximal memory usage comparison for the ``Protein'' dataset, for the supervised closed sequence mining task with the information gain scoring function.}
+	\label{fig:size_closed_infogain_protein}
+\end{figure}
 \end{document}
