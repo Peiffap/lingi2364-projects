@@ -1,0 +1,52 @@
+% This file was created by tikzplotlib v0.9.1.
+\begin{tikzpicture}
+
+\definecolor{color0}{rgb}{0.886274509803922,0.290196078431373,0.2}
+\definecolor{color1}{rgb}{0.203921568627451,0.541176470588235,0.741176470588235}
+
+\begin{axis}[
+axis background/.style={fill=white!89.8039215686275!black},
+axis line style={white},
+legend cell align={left},
+legend style={fill opacity=0.8, draw opacity=1, text opacity=1, at={(0.03,0.97)}, anchor=north west, draw=white!80!black, fill=white!89.8039215686275!black},
+log basis y={10},
+tick align=outside,
+tick pos=left,
+width=\linewidth,
+x grid style={white},
+xlabel={\(k\)},
+xmajorgrids,
+xmin=-2.15, xmax=67.15,
+xtick style={color=white!33.3333333333333!black},
+y grid style={white},
+ylabel={Execution time [\si{\second}]},
+ymajorgrids,
+ymin=0.648773950695056, ymax=176.127490587752,
+ymode=log,
+ytick style={color=white!33.3333333333333!black}
+]
+\addplot [semithick, color0, mark=x, mark size=3, mark options={solid}]
+table {%
+1 0.857339492009487
+2 1.77894615201512
+4 3.47452456600149
+8 8.32307694701012
+16 24.6728381550056
+32 58.480373614002
+64 133.597880968999
+};
+\addlegendentry{\py{CloSpan_heap}}
+\addplot [semithick, color1, mark=x, mark size=3, mark options={solid}]
+table {%
+1 0.836984980996931
+2 1.88820361302351
+4 4.13936550897779
+8 9.15459578498849
+16 24.088385651994
+32 54.1595958849939
+64 136.522076846013
+};
+\addlegendentry{\py{CloSpan_sorted_list}}
+\end{axis}
+
+\end{tikzpicture}

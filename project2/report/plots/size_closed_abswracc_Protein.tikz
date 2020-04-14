@@ -1,0 +1,58 @@
+% This file was created by tikzplotlib v0.9.1.
+\begin{tikzpicture}
+
+\definecolor{color0}{rgb}{0.886274509803922,0.290196078431373,0.2}
+\definecolor{color1}{rgb}{0.203921568627451,0.541176470588235,0.741176470588235}
+
+\begin{axis}[
+axis background/.style={fill=white!89.8039215686275!black},
+axis line style={white},
+legend cell align={left},
+legend style={fill opacity=0.8, draw opacity=1, text opacity=1, draw=white!80!black, fill=white!89.8039215686275!black},
+log basis y={10},
+tick align=outside,
+tick pos=left,
+width=\linewidth,
+x grid style={white},
+xlabel={\(k\)},
+xmajorgrids,
+xmin=-24.55, xmax=537.55,
+xtick style={color=white!33.3333333333333!black},
+y grid style={white},
+ylabel={Maximal memory usage [\si{\kibi\byte}]},
+ymajorgrids,
+ymin=6538.55282670923, ymax=23192.6011564436,
+ymode=log,
+ytick style={color=white!33.3333333333333!black}
+]
+\addplot [semithick, color0, mark=x, mark size=3, mark options={solid}]
+table {%
+1 20392.5859375
+2 20493.064453125
+4 20729.759765625
+8 21022.841796875
+16 21381.3857421875
+32 21895.5302734375
+64 7799.58203125
+128 8264.25390625
+256 9011.82421875
+512 10290.453125
+};
+\addlegendentry{\py{CloSpan_heap}}
+\addplot [semithick, color1, mark=x, mark size=3, mark options={solid}]
+table {%
+1 11886.845703125
+2 12052.36328125
+4 6925.890625
+8 7319.5341796875
+16 7678.53125
+32 8192.51171875
+64 8978.16796875
+128 8280.1337890625
+256 9027.6728515625
+512 10304.8720703125
+};
+\addlegendentry{\py{CloSpan_sorted_list}}
+\end{axis}
+
+\end{tikzpicture}

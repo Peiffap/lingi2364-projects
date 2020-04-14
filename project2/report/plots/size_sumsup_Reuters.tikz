@@ -1,0 +1,67 @@
+% This file was created by tikzplotlib v0.9.1.
+\begin{tikzpicture}
+
+\definecolor{color0}{rgb}{0.886274509803922,0.290196078431373,0.2}
+\definecolor{color1}{rgb}{0.203921568627451,0.541176470588235,0.741176470588235}
+\definecolor{color2}{rgb}{0.596078431372549,0.556862745098039,0.835294117647059}
+
+\begin{axis}[
+axis background/.style={fill=white!89.8039215686275!black},
+axis line style={white},
+legend cell align={left},
+legend style={fill opacity=0.8, draw opacity=1, text opacity=1, at={(0.91,0.5)}, anchor=east, draw=white!80!black, fill=white!89.8039215686275!black},
+log basis y={10},
+tick align=outside,
+tick pos=left,
+width=\linewidth,
+x grid style={white},
+xlabel={\(k\)},
+xmajorgrids,
+xmin=-5.35, xmax=134.35,
+xtick style={color=white!33.3333333333333!black},
+y grid style={white},
+ylabel={Maximal memory usage [\si{\kibi\byte}]},
+ymajorgrids,
+ymin=9258.159832794, ymax=805519.085677918,
+ymode=log,
+ytick style={color=white!33.3333333333333!black}
+]
+\addplot [semithick, color0, mark=x, mark size=3, mark options={solid}]
+table {%
+1 77262.8095703125
+2 11341.9072265625
+4 11573.6376953125
+8 12035.6728515625
+16 13040.005859375
+32 14495.541015625
+64 17041.701171875
+128 21163.9873046875
+};
+\addlegendentry{\py{PrefixSpan_heap}}
+\addplot [semithick, color1, mark=x, mark size=3, mark options={solid}]
+table {%
+1 22034.677734375
+2 11342.5888671875
+4 11574.6943359375
+8 12036.4091796875
+16 13040.4296875
+32 14495.34765625
+64 17041.6328125
+128 21163.8564453125
+};
+\addlegendentry{\py{PrefixSpan_sorted_list}}
+\addplot [semithick, color2, mark=x, mark size=3, mark options={solid}]
+table {%
+1 21379.962890625
+2 51804.595703125
+4 54031.951171875
+8 15511.3642578125
+16 90685.7451171875
+32 227473.709960938
+64 355358.768554688
+128 657528.252929688
+};
+\addlegendentry{\py{SPADE}}
+\end{axis}
+
+\end{tikzpicture}

@@ -1,0 +1,52 @@
+% This file was created by tikzplotlib v0.9.1.
+\begin{tikzpicture}
+
+\definecolor{color0}{rgb}{0.886274509803922,0.290196078431373,0.2}
+\definecolor{color1}{rgb}{0.203921568627451,0.541176470588235,0.741176470588235}
+
+\begin{axis}[
+axis background/.style={fill=white!89.8039215686275!black},
+axis line style={white},
+legend cell align={left},
+legend style={fill opacity=0.8, draw opacity=1, text opacity=1, at={(0.03,0.97)}, anchor=north west, draw=white!80!black, fill=white!89.8039215686275!black},
+log basis y={10},
+tick align=outside,
+tick pos=left,
+width=\linewidth,
+x grid style={white},
+xlabel={\(k\)},
+xmajorgrids,
+xmin=-2.15, xmax=67.15,
+xtick style={color=white!33.3333333333333!black},
+y grid style={white},
+ylabel={Execution time [\si{\second}]},
+ymajorgrids,
+ymin=0.353513396905415, ymax=99.6551237941951,
+ymode=log,
+ytick style={color=white!33.3333333333333!black}
+]
+\addplot [semithick, color0, mark=x, mark size=3, mark options={solid}]
+table {%
+1 0.741887053009123
+2 0.911349514004542
+4 1.35231930200825
+8 16.4948821270082
+16 10.9201177710202
+32 27.0748352769879
+64 71.9168602619902
+};
+\addlegendentry{\py{PrefixSpan_heap}}
+\addplot [semithick, color1, mark=x, mark size=3, mark options={solid}]
+table {%
+1 0.45685015298659
+2 0.646271579986205
+4 1.56921235800837
+8 3.52441805199487
+16 10.8712716670125
+32 28.4895348550053
+64 77.1137343420123
+};
+\addlegendentry{\py{PrefixSpan_sorted_list}}
+\end{axis}
+
+\end{tikzpicture}

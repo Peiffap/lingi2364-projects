@@ -1,0 +1,45 @@
+% This file was created by tikzplotlib v0.9.1.
+\begin{tikzpicture}
+
+\definecolor{color0}{rgb}{0.886274509803922,0.290196078431373,0.2}
+\definecolor{color1}{rgb}{0.203921568627451,0.541176470588235,0.741176470588235}
+
+\begin{axis}[
+axis background/.style={fill=white!89.8039215686275!black},
+axis line style={white},
+legend cell align={left},
+legend style={fill opacity=0.8, draw opacity=1, text opacity=1, at={(0.97,0.03)}, anchor=south east, draw=white!80!black, fill=white!89.8039215686275!black},
+log basis y={10},
+tick align=outside,
+tick pos=left,
+width=\linewidth,
+x grid style={white},
+xlabel={\(k\)},
+xmajorgrids,
+xmin=0.65, xmax=8.35,
+xtick style={color=white!33.3333333333333!black},
+y grid style={white},
+ylabel={Maximal memory usage [\si{\kibi\byte}]},
+ymajorgrids,
+ymin=13325.3501821211, ymax=242850.852990542,
+ymode=log,
+ytick style={color=white!33.3333333333333!black}
+]
+\addplot [semithick, color0, mark=x, mark size=3, mark options={solid}]
+table {%
+1 15204.82421875
+2 189701.505859375
+4 189891.397460938
+8 190226.825195312
+};
+\addlegendentry{\py{CloSpan_heap}}
+\addplot [semithick, color1, mark=x, mark size=3, mark options={solid}]
+table {%
+1 212831.967773438
+2 189704.938476562
+4 189891.602539062
+};
+\addlegendentry{\py{CloSpan_sorted_list}}
+\end{axis}
+
+\end{tikzpicture}
