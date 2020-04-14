@@ -181,11 +181,12 @@ def main(pf=None, nf=None, k=None, verbose=True):
         if verbose:
             print("[{}] {} {} {}".format(', '.join((i for i in patt)), pos, neg, sup))
 
+
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         a = time.perf_counter()
         #main("Protein/SRC1521.txt", "Protein/PKA_group15.txt", 13)
-        main("Reuters/earn.txt", "Reuters/acq.txt", 3)
+        main("Reuters/earn.txt", "Reuters/acq.txt", 64)
         #main("Test/positive.txt", "Test/negative.txt", 6)
         print(time.perf_counter() - a)
     else:

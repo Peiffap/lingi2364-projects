@@ -130,13 +130,13 @@ def main(pf=None, nf=None, k=None, verbose=True):
         """
         # If worse than kth best, ignore pattern.
         # For support score, this does not matter, but for other scoring functions it does.
-        if len(data.supdict) == k and sup < data.results[0][0]:
+        if (sup, patt, matches) in data.results or len(data.supdict) == data.k and sup < data.results[0][0]:
             return
 
         # Push new tuple, and remove old tuples if they become worse than kth best.
         heappush(data.results, (sup, patt, matches))
         data.supdict[sup] += 1
-        if len(data.supdict) > k:
+        if len(data.supdict) > data.k:
             ind = data.supdict[data.results[0][0]]
             del data.supdict[data.results[0][0]]
             while ind > 0:
@@ -158,7 +158,7 @@ def main(pf=None, nf=None, k=None, verbose=True):
         new.sort(key=itemgetter(2), reverse=True) # Sort on support.
         for newitem, newmatches, (bnd, key) in new:
             # If the support is lower than the existing kth best, prune search tree.
-            if len(data.supdict) == k and bnd < data.results[0][0]:
+            if len(data.supdict) == data.k and bnd < data.results[0][0]:
                 break
 
             newpatt = patt + [newitem] # Construct new pattern.
@@ -166,7 +166,9 @@ def main(pf=None, nf=None, k=None, verbose=True):
             topk_rec(newpatt, newmatches, key) # Recursive call.
 
 
-    topk_rec([], [(i, -1) for i in range(len(data.db))], 0) # Last arg ignored.
+    for j in range(1, k+1):
+        data.k = j # This loop stops the miner from getting stuck on large datasets.
+        topk_rec([], [(i, -1) for i in range(len(data.db))], 0)
 
     # Print results.
     for (sup, patt, matches) in data.results:
@@ -179,8 +181,8 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         import time
         a = time.perf_counter()
-        #main("Reuters/earn.txt", "Reuters/acq.txt", 4)
-        main("Test/positive.txt", "Test/negative.txt", 3)
+        main("Reuters/earn.txt", "Reuters/acq.txt", 16)
+        #main("Test/positive.txt", "Test/negative.txt", 3)
         print(time.perf_counter() - a)
     else:
         main()
