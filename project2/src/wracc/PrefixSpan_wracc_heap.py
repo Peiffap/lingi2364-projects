@@ -98,7 +98,7 @@ def nextentries(data, entries):
     )
 
 
-def main(pf=None, nf=None, k=None, verbose=True):
+def main(pf=None, nf=None, k=None, verbose=True, withresults=False):
     if pf is None or nf is None or k is None:
         pos_filepath = sys.argv[1] # filepath to positive class file
         neg_filepath = sys.argv[2] # filepath to negative class file
@@ -189,6 +189,9 @@ def main(pf=None, nf=None, k=None, verbose=True):
         pos_support, neg_support = signsup(matches)
         if verbose:
             print("[{}] {} {} {}".format(', '.join((data.invwordmap[i] for i in patt)), pos_support, neg_support, sup))
+
+    if withresults:
+        return [patt for (sup, patt, matches) in data.results]
 
 
 if __name__ == "__main__":

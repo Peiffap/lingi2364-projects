@@ -88,7 +88,7 @@ def nextentries(data, entries):
     )
 
 
-def main(pf=None, nf=None, k=None, verbose=True):
+def main(pf=None, nf=None, k=None, verbose=True, withresults=False):
     if pf is None or nf is None or k is None:
         pos_filepath = sys.argv[1] # filepath to positive class file
         neg_filepath = sys.argv[2] # filepath to negative class file
@@ -176,12 +176,16 @@ def main(pf=None, nf=None, k=None, verbose=True):
         if verbose:
             print("[{}] {} {} {}".format(', '.join((data.invwordmap[i] for i in patt)), p, n, sup))
 
+    if withresults:
+        return [patt for (sup, patt, matches) in data.results]
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
         import time
         a = time.perf_counter()
-        main("Reuters/earn.txt", "Reuters/acq.txt", 16)
+        res = main("Reuters/earn.txt", "Reuters/acq.txt", 2, withresults=True)
+        print(res)
         #main("Test/positive.txt", "Test/negative.txt", 3)
         print(time.perf_counter() - a)
     else:

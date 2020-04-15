@@ -101,7 +101,7 @@ def nextentries(data, entries):
     )
 
 
-def main(pf=None, nf=None, k=None, verbose=True):
+def main(pf=None, nf=None, k=None, verbose=True, withresults=False):
     if pf is None or nf is None or k is None:
         pos_filepath = sys.argv[1] # filepath to positive class file
         neg_filepath = sys.argv[2] # filepath to negative class file
@@ -249,6 +249,9 @@ def main(pf=None, nf=None, k=None, verbose=True):
         if isclosed(patt, p, n) and verbose: # Post-processing phase.
             print("[{}] {} {} {}".format(', '.join((data.invwordmap[i] for i in patt)), p, n, sup))
 
+    if withresults:
+        return [patt for (_, patt, _, p, n) in data.results if isclosed(patt, p, n)]
+
 
 if __name__ == "__main__":
     if len(sys.argv) == 1:
@@ -257,7 +260,8 @@ if __name__ == "__main__":
         a = time.perf_counter()
         #cProfile.run('main("Reuters/earn.txt", "Reuters/acq.txt", 10)')
         #cProfile.run('main("Protein/SRC1521.txt", "Protein/PKA_group15.txt", 10)')
-        main("Test/positive.txt", "Test/negative.txt", 6)
+        res = main("Test/positive.txt", "Test/negative.txt", 6, withresults=True)
+        print(res)
         print(time.perf_counter() - a)
     else:
         main()
