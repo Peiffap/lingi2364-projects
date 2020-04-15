@@ -80,13 +80,9 @@
 \author{
 \alignauthor Gilles Peiffer (23421600)\\
 	\affaddr{Université catholique de Louvain}\\
-	\affaddr{Place de l'Université 1}\\
-	\affaddr{Louvain-la-Neuve, Belgium}\\
 	\email{gilles.peiffer@student.uclouvain.be}
 \alignauthor Liliya Semerikova (64811600)\\
 	\affaddr{Université catholique de Louvain}\\
-	\affaddr{Place de l'Université 1}\\
-	\affaddr{Louvain-la-Neuve, Belgium}\\
 	\email{liliya.semerikova@student.uclouvain.be}}
 \date{April 17, 2020}
 
@@ -98,15 +94,13 @@
 	The following paper contains a detailed analysis of the performance and results of using various sequential pattern mining algorithms to fulfill several important tasks in the field of data mining.
 	In a first part of the paper, algorithms existing in the literature are described, which are then compared on different tasks.
 	The second part of the paper looks at the results of these mining tasks and gathers insights based on them.
-	
-	\keywords Data mining, machine learning, top-\(k\) frequent pattern, sequential pattern, closed pattern, supervised learning, performance analysis.
 \end{abstract}
 
 \section{Introduction}
 Frequent sequential pattern mining is an active area of research in data mining with broad applications.
 Finding efficient algorithms for this task is thus majorly important, and with the rise of machine learning techniques such as supervised learning, it is interesting to consider which algorithms are able to combine both tasks well.
 
-Additionally, some large datasets contain a lot of redundant information: to take a pathological example, consider the database made of the single sequence \(\langle (a_1)(a_2) \dots (a_{100}) \rangle\).
+Additionally, some large datasets contain a lot of redundant information: consider the database made of the single sequence \(\langle (a_1)(a_2) \dots (a_{100}) \rangle\).
 With a minimum support of 1, it will generate \(2^{100} - 1\) frequent subsequences, all of which are redundant except for the last one because they have the same support.
 For this reason, we also consider algorithms which perform well when mining closed sequential patterns.
 
@@ -122,7 +116,7 @@ If multiple patterns obtain the same total support, all of them should only coun
 In supervised sequence mining, the aim is still to find top-\(k\) most frequent patterns, but with a new scoring function instead of the total support.
 Let \(p(\alpha)\) and \(n(\alpha)\) be the support of sequential pattern \(\alpha\) in both datasets, and \(P\) and \(N\) be the number of transactions in each dataset; in that case, the \emph{weighted relative accuracy} is given by
 \begin{equation}
-\wracc(\alpha) = \frac{PN}{(P + N)^2} \left(\frac{p(\alpha)}{P} - \frac{n(\alpha)}{N}\right).
+\wracc(\alpha) \triangleq \frac{PN}{(P + N)^2} \left(\frac{p(\alpha)}{P} - \frac{n(\alpha)}{N}\right).
 \end{equation}
 
 In order to search for frequent patterns efficiently, an upper bounding procedure is necessary.
@@ -135,28 +129,28 @@ where the assumption is made that all transactions containing \(\alpha\) in the 
 
 \subsection{Supervised Closed Sequence Mining}
 \label{sec:scsm}
-For our purposes, we define a closed sequential pattern \(\alpha\) as a sequence such that for any sequence \(\beta \sqsupsetneq \alpha\), \(p(\alpha) > p(\beta)\) or \(n(\alpha) > n(\beta)\), that is, no supersequence exists such that both have the same support in both datasets.
+For our purposes, we define a closed sequential pattern \(\alpha\) as a sequence such that for any sequence \(\beta \sqsupsetneq \alpha\), \(p(\alpha) > p(\beta)\) or \(n(\alpha) > n(\beta)\), that is, no supersequence exists which has the same support in both datasets.
 
 The task of supervised closed sequence mining is applied using three different scoring functions:
 \begin{itemize}
 	\item The \(\wracc\) scoring function described earlier.
 	\item The \(\abswracc\) scoring function, defined as
 	\begin{equation}
-	\abswracc(\alpha) = \abs{\wracc(\alpha)}.
+	\abswracc(\alpha) \triangleq \abs{\wracc(\alpha)}.
 	\end{equation}
 	
 	Upper bounding can then be done as follows: for a sequential pattern \(\beta \sqsupseteq \alpha\), the highest possible \(\abswracc\) score that can be attained is bounded by
 	\begin{equation}
 	\abswracc(\beta) \leqslant \frac{\max\{N p(\alpha), P n(\alpha)\}}{(P + N)^2}, \ \forall \beta \sqsupseteq \alpha.
 	\end{equation}
-	\item The information gain function~\cite{Quinlan1986} (where \(p\) and \(n\) are used instead of \(p(\alpha)\) and \(n(\alpha)\), to alleviate notations):
+	\item The information gain function, suggested by Quinlan~\cite{Quinlan1986} (where \(p\) and \(n\) are used instead of \(p(\alpha)\) and \(n(\alpha)\), to alleviate notations):
 	\begin{multline}
-	\ig(\alpha) = \imp\left(\frac{P}{P + N}\right) - \frac{p + n}{P + N}\, \imp\left(\frac{p}{p + n}\right) \\
+	\ig(\alpha) \triangleq \imp\left(\frac{P}{P + N}\right) - \frac{p + n}{P + N}\, \imp\left(\frac{p}{p + n}\right) \\
 	{} - \frac{P + N - p - n}{P + N}\, \imp\left(\frac{P - p}{P + N - p - n}\right),
 	\end{multline}
 	where \(\imp\) is the entropy, defined as
 	\begin{equation}
-	\imp(x) = - x \lg x - (1-x) \lg (1-x).
+	\imp(x) \triangleq - x \lg x - (1-x) \lg (1-x).
 	\end{equation}
 	
 	Computing a bound for this scoring function is harder to do analytically.
@@ -180,7 +174,7 @@ The algorithm is ran with a value of \(k\) starting from 1 all the way up to the
 By using an incremental strategy, we were able to stop this from happening, with minimal overhead on easier datasets.
 
 \subsection{SPADE}
-The \spade algorithm was first proposed by Zaki~\cite{Zaki2001}, to solve the problem of frequent sequence mining.
+The \spade{} algorithm was first proposed by Zaki~\cite{Zaki2001}, to solve the problem of frequent sequence mining.
 For our survey, it was used to solve task~\ref{sec:fsm}.
 It uses a depth-first approach, and is similar to the \textsf{ECLAT} algorithm, also proposed by Zaki~\cite{Zaki2000}.
 
@@ -189,11 +183,7 @@ It uses a depth-first approach, and is similar to the \textsf{ECLAT} algorithm, 
 The \cs{} algorithm is an adaptation of \ps{} designed specifically to mine closed sequential patterns proposed by Yan et al.~\cite{Yan2003}, as in task~\ref{sec:scsm}.
 In order to do so, the \cs{} algorithm runs in two phases:
 \begin{itemize}
-	\item A \emph{search} phase, during which \ps{} is run with the additional constraint of computing a score defined as
-	\begin{equation}
-	\sum_{(t, p) \in \db|_\alpha} \db[t] - p + 1,
-	\end{equation}
-	where \(\db|_\alpha\) is the \(\alpha\)-projected database.
+	\item A \emph{search} phase, during which \ps{} is run and the following score is computed as \(\sum_{(t, p) \in \db|_\alpha} \db[t] - p + 1\), where \(\db|_\alpha\) is the \(\alpha\)-projected database.
 	For any pattern, we check whether a pattern has already been seen that has the same score while also being a supersequence.
 	If so, we cut the search tree and backtrack.
 	\item A \emph{post-processing} phase, where all patterns which are not closed are removed.
@@ -203,8 +193,18 @@ As with \ps, in order to avoid exploring the search tree too much because of ine
 
 \section{Performance and Analysis of Resulting Patterns}
 \subsection{Frequent Sequence Mining}
+\label{sec:perf_fsm}
 Figures~\ref{fig:time_sumsup_reuters} and~\ref{fig:time_sumsup_protein} show a comparison of execution times for the frequent sequence mining tasks, respectively on the ``Reuters'' and ``Protein'' datasets.
+One can observe that the \ps{} implementations are more memory-efficient.
+This can be explained by the fact that \spade{} is more straightforward, whereas \ps{} uses a more intelligent pattern-growth principle to generate new candidates.
 Figures~\ref{fig:size_sumsup_reuters} and~\ref{fig:size_sumsup_protein} compare their maximal memory usage.
+On this figure and on the next ones, the spike for very low values of \(k\) is presumably a consequence of other tasks running in parallel, which are very visible due to the short execution time for these tasks.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/length_reuters.tikz}
+	\caption{Average pattern length on the ``Reuters'' dataset, using different scoring functions.}
+	\label{fig:length_reuters}
+\end{figure}%
 \begin{figure}[!hbtp]
 	\centering
 	\includegraphics[width=\linewidth]{plots/time_sumsup_reuters.tikz}
@@ -218,12 +218,13 @@ Figures~\ref{fig:size_sumsup_reuters} and~\ref{fig:size_sumsup_protein} compare 
 	\label{fig:size_sumsup_reuters}
 \end{figure}
 
-By observing the output patterns in this task, one can see that shorter patterns always obtain higher support scores.
+By observing the output patterns in this task on Figures~\ref{fig:length_reuters} and~\ref{fig:length_protein}, one can see that shorter patterns always obtain higher support scores.
 While this can be useful, Section~\ref{sec:perf_ssm} shows that this is very different from the results obtained when trying to obtain information from the patterns that are being selected.
 \subsection{Supervised Sequence Mining}
 \label{sec:perf_ssm}
 Figures~\ref{fig:time_wracc_reuters} and~\ref{fig:time_wracc_protein} show a comparison of execution times for the frequent sequence mining tasks, respectively on the ``Reuters'' and ``Protein'' datasets.
 Figures~\ref{fig:size_wracc_reuters} and~\ref{fig:size_wracc_protein} compare their maximal memory usage.
+Both implementations of \ps{} are nearly identical in both aspects, except for some outliers at lower values of \(k\).
 \begin{figure}[!hbtp]
 	\centering
 	\includegraphics[width=\linewidth]{plots/time_wracc_reuters.tikz}
@@ -242,11 +243,17 @@ One possible issue with this is that sequences which appear a lot in the negativ
 \(\abswracc\) and information gain, as explored in Section~\ref{sec:perf_scsm}, can help solve this problem.
 When comparing the results with those of Section~\ref{sec:perf_scsm}, one can also observe a lot of superfluous information is present in the output of the non closed algorithms.
 By only considering closed patterns, this effect can be reduced, as one gets a lossless representation of the dataset.
+As expected, the average pattern length is also longer than for the sum of supports scoring function of Section~\ref{sec:perf_fsm}, which is apparent on Figures~\ref{fig:length_reuters} and~\ref{fig:length_protein}.
+
 \subsection{Supervised Closed Sequence Mining}
 \label{sec:perf_scsm}
 As mentioned in Section~\ref{sec:perf_ssm}, closed patterns are a lossless representation of the dataset.
 Figures~\ref{fig:time_closed_wracc_reuters},~\ref{fig:time_closed_abswracc_reuters}, and~\ref{fig:time_closed_infogain_reuters} give the execution for the three scoring functions for the supervised closed sequence mining task on the ``Reuters'' dataset, while Figures~\ref{fig:size_closed_wracc_reuters},~\ref{fig:size_closed_abswracc_reuters}, and~\ref{fig:size_closed_infogain_reuters} give the maximal memory consumption.
 Figures~\ref{fig:time_closed_wracc_protein} through~\ref{fig:size_closed_infogain_protein} do the same for the ``Protein'' dataset.
+As one can see on these figures for the ``Reuters'' dataset, there seems to be an apparent memory overhead for low values of \(k\) when using the implementation with a sorted list, though this difference disappears for higher values of \(k\).
+The inverse effect appears on the ``Protein'' dataset, with the heap implementation using more memory.
+This leads us to believe that certain properties of the dataset might affect the various algorithms differently.
+Another observation is that for the information gain scoring function on the ``Reuters'' dataset, which requires a lot of precomputation and is thus slower to compute even for small values of \(k\), the spike which could be seen on other memory usage figures is gone, which corroborates our belief that this spike is due to noise on the measurements as a consequence of low execution time, rather than an intrinsic property of the algorithms.
 \begin{figure}[!hbtp]
 	\centering
 	\includegraphics[width=\linewidth]{plots/time_closed_wracc_reuters.tikz}
@@ -282,7 +289,6 @@ Performance-wise, the \(\abswracc\) scoring function does not make a big differe
 	\caption{Execution time comparison for the ``Reuters'' dataset, for the supervised closed sequence mining task with the information gain scoring function.}
 	\label{fig:time_closed_infogain_reuters}
 \end{figure}
-\begin{absolutelynopagebreak}
 \begin{figure}[H]
 	\centering
 	\includegraphics[width=\linewidth]{plots/size_closed_infogain_reuters.tikz}
@@ -291,14 +297,14 @@ Performance-wise, the \(\abswracc\) scoring function does not make a big differe
 \end{figure}
 
 As with the \(\abswracc\) scoring function, the information gain is a way of measuring the quality of a pattern in a supervised environment.
-However, performance is a bigger concern in this case, since the bounding procedure on the information gain function, despite being optimal, is not strong enough to prune the search tree very efficiently.
-There is much more fluctuation in the values of the information gain function that with the absolute weighted relative accuracy, and choosing which to use depends strongly on what the user needs.
+However, it is often slower, due to its weaker upper-bound (depsite the latter being optimal).
+Often, both functions give similar results, though this is not always the case.
+Choosing which scoring function to use thus depends on problem-specific properties.
 
 \section{Conclusion}
 Sequence mining, whether supervised or not, is a hugely important task, with broad applications.
 By combining it with supervised learning, it becomes even more useful, as sequence mining can be used to obtain information about multiple datasets, and to find defining features of each, according to various scoring functions.
 Closed sequence mining is useful in that it provides the user with a lossless representation of the dataset.
-\end{absolutelynopagebreak}
 
 \newpage
 \printbibliography
@@ -306,7 +312,12 @@ Closed sequence mining is useful in that it provides the user with a lossless re
 \appendix
 
 \section{Omitted Figures}
-
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/length_protein.tikz}
+	\caption{Average pattern length on the ``Protein'' dataset, using different scoring functions.}
+	\label{fig:length_protein}
+\end{figure}%
 \begin{figure}[!hbtp]
 	\centering
 	\includegraphics[width=\linewidth]{plots/time_sumsup_protein.tikz}
