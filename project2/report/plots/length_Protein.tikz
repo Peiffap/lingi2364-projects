@@ -1,0 +1,96 @@
+% This file was created by tikzplotlib v0.9.1.
+\begin{tikzpicture}
+
+\definecolor{color0}{rgb}{0.886274509803922,0.290196078431373,0.2}
+\definecolor{color1}{rgb}{0.203921568627451,0.541176470588235,0.741176470588235}
+\definecolor{color2}{rgb}{0.596078431372549,0.556862745098039,0.835294117647059}
+\definecolor{color3}{rgb}{0.984313725490196,0.756862745098039,0.368627450980392}
+
+\begin{axis}[
+axis background/.style={fill=white!89.8039215686275!black},
+axis line style={white},
+legend cell align={left},
+legend style={fill opacity=0.8, draw opacity=1, text opacity=1, at={(0.97,0.03)}, anchor=south east, draw=white!80!black, fill=white!89.8039215686275!black},
+log basis y={10},
+tick align=outside,
+tick pos=left,
+width=\linewidth,
+x grid style={white},
+xlabel={\(k\)},
+xmajorgrids,
+xmin=-11.75, xmax=268.75,
+xtick style={color=white!33.3333333333333!black},
+y grid style={white},
+ylabel={Average pattern length},
+ymajorgrids,
+ymin=0.94491585752486, ymax=3.28657929948638,
+ymode=log,
+ytick style={color=white!33.3333333333333!black}
+]
+\addplot [semithick, color0, mark=x, mark size=3, mark options={solid}]
+table {%
+1 1
+2 1
+4 1
+8 1.11111111111111
+16 1.23529411764706
+32 1.61111111111111
+64 1.85869565217391
+128 2.12167300380228
+};
+\addlegendentry{Sumsup}
+\addplot [semithick, color1, mark=x, mark size=3, mark options={solid}]
+table {%
+1 1
+2 1.5
+4 1.75
+8 1.875
+16 1.9375
+32 2.0625
+64 2.47058823529412
+128 2.56521739130435
+256 2.70915032679739
+};
+\addlegendentry{WRAcc}
+\addplot [semithick, color2, mark=x, mark size=3, mark options={solid}]
+table {%
+1 1
+2 1.5
+4 1.75
+8 1.875
+16 1.9375
+32 2.0625
+64 2.47058823529412
+128 2.56521739130435
+256 2.70915032679739
+};
+\addlegendentry{Closed WRAcc}
+\addplot [semithick, white!46.6666666666667!black, mark=x, mark size=3, mark options={solid}]
+table {%
+1 1
+2 1.5
+4 2
+8 2
+16 2
+32 2.125
+64 2.39393939393939
+128 2.59558823529412
+256 2.70934256055363
+};
+\addlegendentry{Closed AbsWRAcc}
+\addplot [semithick, color3, mark=x, mark size=3, mark options={solid}]
+table {%
+1 1
+2 1.5
+4 2
+8 1.875
+16 2
+32 2.40625
+64 2.61764705882353
+128 2.81944444444444
+256 3.10554089709763
+};
+\addlegendentry{Closed IG}
+\end{axis}
+
+\end{tikzpicture}

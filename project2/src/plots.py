@@ -75,6 +75,30 @@ def plt_size():
     for names, file in zip(names_list, file_list):
         plt_size_aux(names, file)
 
+def plt_len():
+    datasets = ['Protein', 'Reuters']
+    names = ['Sumsup', 'WRAcc', 'Closed WRAcc', 'Closed AbsWRAcc', 'Closed IG']
+
+    lengths = pickle.load(open("../report/data/lengths.p", "rb"))
+
+    dataset_k = {}
+    for data in datasets:
+        dataset_k[data] = {}
+        for alg in names:
+            dataset_k[data][alg] = [2**k for k in range(len(lengths[data][alg]))]
+
+    for data in datasets:
+        fig, ax = plt.subplots()
+        for alg in names:
+            ax.semilogy(dataset_k[data][alg], lengths[data][alg], marker="x")
+        ax.set_xlabel("\\(k\\)")
+        ax.set_ylabel("Average pattern length")
+        plt.legend(["%s" % (name) for name in names])
+        ax.plot()
+
+        tikzplotlib.save("../report/plots/length_%s.tikz" % (data), axis_width="\\linewidth")
+
 if __name__ == "__main__":
     #plt_time()
-    plt_size()
+    #plt_size()
+    plt_len()
