@@ -109,7 +109,6 @@ For this reason, we also consider algorithms which perform well when mining clos
 \subsection{Frequent Sequence Mining}
 \label{sec:fsm}
 The goal of this task is, given two datasets of respectively positive and negative examples, to find the top-\(k\) most frequent sequential patterns across both of them.
-If multiple patterns obtain the same total support, all of them should only count for 1 in the value of \(k\).
 
 \subsection{Supervised Sequence Mining}
 \label{sec:ssm}
@@ -125,11 +124,11 @@ It is easy to see that for a sequential pattern \(\beta \sqsupseteq \alpha\), th
 \begin{equation}
 \wracc(\beta) \leqslant \frac{N p(\alpha)}{(P + N)^2}, \quad \forall \beta \sqsupseteq \alpha,
 \end{equation}
-where the assumption is made that all transactions containing \(\alpha\) in the positive dataset also contain \(\beta\), yet none of the transactions in the negative dataset do.
+where the assumption is made that \(p(\beta) = p(\alpha)\) and \(n(\beta) = 0\).
 
 \subsection{Supervised Closed Sequence Mining}
 \label{sec:scsm}
-For our purposes, we define a closed sequential pattern \(\alpha\) as a sequence such that for any sequence \(\beta \sqsupsetneq \alpha\), \(p(\alpha) > p(\beta)\) or \(n(\alpha) > n(\beta)\), that is, no supersequence exists which has the same support in both datasets.
+We define a closed sequential pattern \(\alpha\) as a sequence such that for any sequence \(\beta \sqsupsetneq \alpha\), \(p(\alpha) > p(\beta)\) or \(n(\alpha) > n(\beta)\), that is, no supersequence exists which has the same support in both datasets.
 
 The task of supervised closed sequence mining is applied using three different scoring functions:
 \begin{itemize}
@@ -139,7 +138,7 @@ The task of supervised closed sequence mining is applied using three different s
 	\abswracc(\alpha) \triangleq \abs{\wracc(\alpha)}.
 	\end{equation}
 	
-	Upper bounding can then be done as follows: for a sequential pattern \(\beta \sqsupseteq \alpha\), the highest possible \(\abswracc\) score that can be attained is bounded by
+	For a sequential pattern \(\beta \sqsupseteq \alpha\), the highest possible \(\abswracc\) score that can be attained is bounded by
 	\begin{equation}
 	\abswracc(\beta) \leqslant \frac{\max\{N p(\alpha), P n(\alpha)\}}{(P + N)^2}, \ \forall \beta \sqsupseteq \alpha.
 	\end{equation}
@@ -153,13 +152,12 @@ The task of supervised closed sequence mining is applied using three different s
 	\imp(x) \triangleq - x \lg x - (1-x) \lg (1-x).
 	\end{equation}
 	
-	Computing a bound for this scoring function is harder to do analytically.
 	To compute the maximum score for a sequential pattern \(\beta \sqsupseteq \alpha\), one has the following relationship:
 	\begin{equation}
 	\ig(\beta) \leqslant \max_{\substack{0 \leqslant \pi \leqslant p(\alpha) \\ 0 \leqslant \nu \leqslant n(\alpha)}} \ig(\pi, \nu), \quad \forall \beta \sqsupseteq \alpha,
 	\end{equation}
 	where we have used another definition of the information gain function directly taking the supports of the sequence as arguments.
-	By precomputing the information gain for all pairs of values, this bound can be computed as a cumulative maximum.
+	This bound can be precomputed as a cumulative maximum on the information gain for all pairs of values.
 \end{itemize}
 
 \section{Algorithms}
@@ -283,13 +281,13 @@ The patterns that are obtained are a subset of the ones obtained previously, whe
 \end{figure}
 Performance-wise, the \(\abswracc\) scoring function does not make a big difference compared to the original \(\wracc\) function, but it is a much better guide in determining whether a given pattern brings a lot of information with regards to either class in the dataset.
 
-\begin{figure}[H]
+\begin{figure}[!hbtp]
 	\centering
 	\includegraphics[width=\linewidth]{plots/time_closed_infogain_reuters.tikz}
 	\caption{Execution time comparison for the ``Reuters'' dataset, for the supervised closed sequence mining task with the information gain scoring function.}
 	\label{fig:time_closed_infogain_reuters}
 \end{figure}
-\begin{figure}[H]
+\begin{figure}[!hbtp]
 	\centering
 	\includegraphics[width=\linewidth]{plots/size_closed_infogain_reuters.tikz}
 	\caption{Maximal memory usage comparison for the ``Reuters'' dataset, for the supervised closed sequence mining task with the information gain scoring function.}
