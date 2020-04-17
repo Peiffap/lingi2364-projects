@@ -11,7 +11,6 @@ axis background/.style={fill=white!89.8039215686275!black},
 axis line style={white},
 legend cell align={left},
 legend style={fill opacity=0.8, draw opacity=1, text opacity=1, at={(0.97,0.03)}, anchor=south east, draw=white!80!black, fill=white!89.8039215686275!black},
-log basis y={10},
 tick align=outside,
 tick pos=left,
 width=\linewidth,
@@ -23,8 +22,7 @@ xtick style={color=white!33.3333333333333!black},
 y grid style={white},
 ylabel={Average pattern length},
 ymajorgrids,
-ymin=0.947273670421767, ymax=3.11899881396467,
-ymode=log,
+ymin=0.902272727272727, ymax=3.05227272727273,
 ytick style={color=white!33.3333333333333!black}
 ]
 \addplot [semithick, color0, mark=x, mark size=3, mark options={solid}]

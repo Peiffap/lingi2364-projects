@@ -90,7 +90,7 @@ def plt_len():
     for data in datasets:
         fig, ax = plt.subplots()
         for alg in names:
-            ax.semilogy(dataset_k[data][alg], lengths[data][alg], marker="x")
+            ax.plot(dataset_k[data][alg], lengths[data][alg], marker="x")
         ax.set_xlabel("\\(k\\)")
         ax.set_ylabel("Average pattern length")
         plt.legend(["%s" % (name) for name in names])
