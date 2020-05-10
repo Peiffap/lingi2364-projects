@@ -1,0 +1,293 @@
+\documentclass{sigkddExp}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{minted}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{float}
+\usepackage{mathtools}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+
+\usepackage{pgfplots}
+\pgfplotsset{compat=newest}
+\usepgfplotslibrary{groupplots}
+\usepgfplotslibrary{dateplot}
+\usepackage{tikzscale}
+\usepackage[backend=biber, style=trad-abbrv]{biblatex}
+\makeatletter
+\def\blx@maxline{77}
+\makeatother
+
+\addbibresource{bibliography.bib}
+
+\usepackage[binary-units=true]{siunitx}
+
+\newcommand{\py}[1]{\mintinline{python}{#1}}
+\newcommand{\java}[1]{\mintinline{java}{#1}}
+\newcommand{\sql}[1]{\mintinline{sql}{#1}}
+
+\renewcommand{\epsilon}{\varepsilon}
+\renewcommand{\theta}{\vartheta}
+\renewcommand{\kappa}{\varkappa}
+\renewcommand{\rho}{\varrho}
+\renewcommand{\phi}{\varphi}
+
+\newcommand{\db}{\mathcal{D}}
+\newcommand{\is}{\mathcal{I}}
+\newcommand{\tr}{\mathcal{T}}
+
+\newcommand{\abs}[1]{|#1|}
+\makeatletter
+\@ifundefined{thepage}{\def\thepage{\arabic{page}}}{}%
+\makeatother
+\usepackage{csquotes}
+\usepackage{hyperref}
+
+\newcommand{\gspan}{\textsf{gSpan}}
+
+\newcommand{\wracc}{\mathrm{WRAcc}}
+\newcommand{\abswracc}{\mathrm{AbsWRAcc}}
+\newcommand{\ig}{\mathrm{IG}}
+\newcommand{\imp}{\mathrm{imp}}
+
+% Setup the mathb font (from mathabx.sty)
+\DeclareFontFamily{U}{mathb}{\hyphenchar\font45}
+\DeclareFontShape{U}{mathb}{m}{n}{
+	<5> <6> <7> <8> <9> <10> gen * mathb
+	<10.95> mathb10 <12> <14.4> <17.28> <20.74> <24.88> mathb12
+}{}
+\DeclareSymbolFont{mathb}{U}{mathb}{m}{n}
+
+% Define a sqsupseteq character from that font (from mathabx.dcl)
+
+\DeclareMathSymbol{\sqsupsetneq}    {3}{mathb}{"89}
+
+\newenvironment{absolutelynopagebreak}
+{\par\nobreak\vfil\penalty0\vfilneg
+	\vtop\bgroup}
+{\par\xdef\tpd{\the\prevdepth}\egroup
+	\prevdepth=\tpd}
+
+\numberofauthors{2}
+
+\title{Mining Patterns in Data}
+\subtitle{Classifying Graphs}
+\author{
+\alignauthor Gilles Peiffer (23421600)\\
+	\affaddr{Université catholique de Louvain}\\
+	\email{gilles.peiffer@student.uclouvain.be}
+\alignauthor Liliya Semerikova (64811600)\\
+	\affaddr{Université catholique de Louvain}\\
+	\email{liliya.semerikova@student.uclouvain.be}}
+\date{May 15, 2020}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+	The following paper contains some explanations concerning the third assignment for the ``Mining Patterns in Data'' class.
+	Various tasks had to be implemented, with all of them being related to graph mining and classification using \gspan.
+	Several interesting insights are given, as well as some implementation details for the various pieces of code.
+	We also give some information about the performance tradeoffs with various models.
+\end{abstract}
+
+\section{Introduction}
+Frequent substructure mining has been an important data mining problem for some time, as labeled graphs can be used to model complicated substructure patterns in data.
+
+For the purpose of this paper, we consider the general task of assigning a label to elements of a dataset of molecules, using existing machine learning algorithms and techniques from pattern-based classification.
+
+All algorithms and experiments in this paper were implemented in Python, using scikit-learn~\cite{sklearn}.
+
+\section{Tasks}
+\label{sec:tasks}
+Four tasks have to completed as part of this assignment.
+
+\subsection{Finding subgraphs}
+The first task is concerned with finding the top-\(k\) most confident frequent subgraphs in the positive dataset.
+
+\subsection{Training a basic model}
+In this second task, the result of the previous task is used to build a pattern-based classifier in order to predict the class of unknown molecules.
+
+\subsection{Sequential covering for rule learning}
+The third task builds a classification model using sequential covering, i.e. by successively removing classified transactions from the database.
+It uses the top-\(k\) mining algorithm in order to decide which pattern to prune the database with (by successively calling it with \(k=1\)).
+
+\subsection{Another classifier}
+The final task is similar to the second one, as it is about finding a better classifier based on a graph mining algorithm.
+
+\section{Algorithms \& implementations}
+\label{sec:algs}
+Various algorithms and implementations were used to complete the tasks outlined in Section~\ref{sec:tasks}.
+
+\subsection{gSpan}
+The \gspan{} algorithm was proposed by Yan \& Han~\cite{Yan2002} in order to efficiently mine frequent substructures without candidate generation.
+It significantly outperforms other algorithms, like the apriori-based \textsf{FSG}~\cite{Kuramochi2004}.
+The \gspan{} algorithm was provided as a Python module by the teaching staff for the class.
+
+\subsection{Top-\(k\) mining with gSpan}
+In order to adapt the \gspan{} algorithm to mine only the top-\(k\) frequent patterns in the graph database, two functions needed to be implemented in \py{FrequentPositiveGraphs}:
+\begin{itemize}
+	\item \py{store(self, dfs_code, gid_subsets)} is called whenever the \gspan{} implementation wants to store a pattern.
+	To only store the top-\(k\) patterns, we thus have to determine whether the pattern that is being scheduled for storing has a higher confidence/frequency than the ``worst'' pattern currently being stored.
+	
+	To store the list of current patterns, we decided to use a sorted list, with the sortedness property being maintained thanks to the functions in Python's \py{bisect} module.
+	Another possible implementation choice, the priority queue, does not have a much better performance, as was demonstrated in our timing benchmarks in the report for the second assignment.
+	\item \py{prune(self, gid_subsets)} is called by \gspan{} when it tries to prune part of the search tree.
+	In order to work with top-\(k\) pattern mining, it should return that the subtree can be pruned if either the confidence or the support is too low.
+\end{itemize}
+
+\subsection{Sequential covering}
+Sequential covering is an iterative approach to pattern-based classification.
+Successively, the best pattern in the data is recognized and the transactions containing it are removed from the database.
+It uses the top-\(k\) version of \gspan, with \(k = 1\), to generate this best pattern, hence the ``best'' pattern is the one with the highest confidence in our case.\footnote{Other possibilities include using another criterion, such as \(\chi^2\) or the information gain.}
+Once there are a certain predefined number of patterns in the current pattern set, the unclassified transactions, if any, are assigned a default label.
+
+\subsection{Classification}
+Once the top-\(k\) best patterns have been found, and after some minor modifications to make them work with the scikit-learn library, it is possible to use standard machine learning classifiers to assign a class label to unknown transactions, based on a model built using the best patterns.
+In order to obtain the best possible model (according to some predefined performance metric, such as the classification accuracy), most classifiers have hyper-parameters which can be tuned.
+Other ways to improve performance include various means of preprocessing data, or combining predictions from multiple classifiers.
+
+\subsubsection{Decision trees}
+A decision tree algorithm is fairly straightforward, in that it builds a tree one can traverse according to the presence of certain patterns in the transaction being classified.
+A decision tree algorithm works by selecting, at each of its nodes, the best pattern to classify the data on.
+
+\subsubsection{Neural networks}
+Neural networks are another type of machine learning tool that can potentially be used to classify data.
+Due to the constraints on the software we are allowed to use, the scikit-learn implementation of multi-layer perceptrons (\py{MLPClassifier}) is the simplest way to implement a neural network for the classification task at hand.
+According to the universal approximation theorem as proposed in~\cite{Cybenko1989}, any function can be represented by such an MLP, under certain mild assumptions, hence this type of classifier is in theory a good candidate for the task at hand.
+
+\subsubsection{Support vector machines}
+Another possible model for the classification task, that can easily be implemented with scikit-learn, is the support vector machine.
+SVMs try to maximize the classification margin between the positive and negative samples, possibly in some projected space (using a kernel transformation).
+The loss function which one tries to minimize can be adapted with a regularization constant, in order to control how badly misclassifications are punished.
+
+\subsubsection{\(k\)-nearest neighbors}
+\(k\)-nearest neighbor classification classifies test data according to the labels of its \(k\)-nearest neighbors in the training set, and the distance to each of them.
+\(k\)-NN is a lazy algorithm, hence it is efficient in situations where there is a large amount of data.
+
+\subsubsection{Data preprocessing}
+Data preprocessing is an important step in machine learning.
+Depending on the algorithm being used, several techniques can be considered to improve performance, such as principal component analysis or statistical selection of most important features of a model.
+This type of preprocessing serves two purposes: it can help to avoid overfitting, as well as reduce computation time significantly if the problem dimensionality is large.
+
+\section{Performance evaluation \& model comparison}
+\subsection{Finding graphs}
+In the first task, no models are built: it simply consists in manipulating and modifying the \gspan{} algorithm to only return the top-\(k\) substructure patterns from the database.
+This can drastically reduce the computation time needed to mine a given database in some cases as the search tree can efficiently be pruned, without strongly negatively impacting the accuracy of the models built from the mined patterns, as using fewer patterns reduces overfitting.
+This is shown on Figure~\ref{fig:time_topk}.
+
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/acc_topk.tikz}
+	\caption{Influence of \(k\) on prediction accuracy of the model.
+	For this experiment, the classifier was a \py{DecisionTreeClassifer(random_state=1)}, with accuracy being computed using \(5\)-fold cross-validation and a minimum support value of \(1000\).
+	The shaded region represents one standard deviation.}
+	\label{fig:time_topk}
+\end{figure}
+
+As one can see, the training set accuracy increases very quickly once the number of patterns used for classification increases, while the increase in test accuracy is much more minimal.
+We also observe that beyond a certain value of \(k\), no further changes occur to the prediction accuracy.
+This is because there are only a limited number of patterns satisfying the minimum support constraint.
+
+\subsection{Training a model}
+This section groups the analysis for the final three tasks, as all three are concerned with building a machine learning model based on patterns that were mined.
+
+\subsubsection{Defining a performance metric}
+In order to compare various machine learning models, it is important to choose a good performance metric.
+Several choices exist for metric, each with its own properties.
+For the purpose of this assignment, we were tasked with using the accuracy, i.e. the proportion of correct classifications in the test set.
+
+\subsubsection{Estimating model quality}
+\label{sec:cv}
+Now that we have decided which performance metric to use, we need to define an estimation procedure.
+The traditional choice is to use \(k\)-fold cross-validation.
+Cross-validation works by dividing the dataset into \(k\) distinct subsets, called ``folds''.
+\(k\) models are then trained on \(k-1\) folds, and the accuracy on each left-over validation fold is averaged to estimate the true model accuracy.
+
+In order to detect eventual overfitting, it can also be useful to look at the model accuracy on the data it was trained with.
+If there is a large disparity between both accuracy figures, the model does not generalize very well.
+
+\subsubsection{Visualizing performance}
+Once the metric and evaluation procedure have been defined, it is important to find a clear way to compare the models.
+For this purpose, one can use so-called ``learning curves'', which depict the evolution of the performance for a given model and metric as a function of training set size.
+Examples of such curves are given in Figures~\ref{fig:dt_performance} to~\ref{fig:sc_performance}.
+
+\subsubsection{Tuning the model}
+Once all the previous points have been handled, one can tune the model by choosing hyper-parameters which perform the best.
+Other than trial-and-error, and occasionally using some domain-specific knowledge, there are no one-size-fits-all guidelines for this step.
+However, a good way of exploring the hyper-parameter space is to use exponentially-spaced values for each, and using scikit-learn's \py{GridSearchCV} function, which computes the cross-validated accuracy (as explained in Section~\ref{sec:cv}) for each possible combination of hyper-parameters.
+Other choices include using a specialized hyper-parameter optimization library, such as Hyperopt~\cite{hyperopt2013, bergstra2013hyperopt}.
+
+\subsubsection{Results}
+The following tests summarize the performance of the various models when trained on the full \texttt{molecules} dataset, with \(\textnormal{minsup} = 1000\) and \(k = 64\).
+These values were chosen so as to provide a good tradeoff between accuracy of the generated models and execution time of the \gspan{} algorithm.
+No particular preprocessing was done, in order to stay in a pattern-based environment.
+However, especially in cases where overfitting occurs a lot, it would be a good idea to apply e.g. a principal components analysis transformation to the data, in order to reduce the problem dimensionality.
+Doing this correctly using scikit-learn can be done using the \py{pipeline} module.
+
+All figures use shading to indicate one standard deviation, and the \(x\)-axis indicates the percentage of the total data set used as training set (when using \(k\)-fold cross-validation, the training set uses \(k-1\) folds, whereas the remaining fold is used as validation set).
+
+\paragraph{Learning curves}
+Figure~\ref{fig:dt_performance} gives the performance of a decision tree classifier.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/dt_performance.tikz}
+	\caption{Learning curves on the train and test sets for the decision tree classifier.}
+	\label{fig:dt_performance}
+\end{figure}
+Results indicate that there is quite a bit of overfitting with this model, though one should expect to have accuracy close to \SI{70}{\percent} on an unknown test set.
+
+Figure~\ref{fig:svm_performance} gives the performance of a support vector machine classifier.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/svm_performance.tikz}
+	\caption{Learning curves on the train and test sets for the support vector machine classifier.}
+	\label{fig:svm_performance}
+\end{figure}
+The figure indicates there is a lot less overfitting than with the decision tree classifier, though results in general are disappointing, with an expected accuracy of about \SI{65}{\percent} on an unknown test set but a large standard deviation on this estimate.
+
+Figure~\ref{fig:knn_performance} gives the performance of a nearest neighbors classifier.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/knn_performance.tikz}
+	\caption{Learning curves on the train and test sets for the nearest neighbors classifier.}
+	\label{fig:knn_performance}
+\end{figure}
+The \(k\)-nearest neighbors algorithm performs similarly to the support vector machine classifier, but has much lower variance on its estimated \SI{65}{\percent} accuracy.
+
+Figure~\ref{fig:mlp_performance} gives the performance of a multi-layer perceptron classifier.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/mlp_performance.tikz}
+	\caption{Learning curves on the train and test sets for the multi-layer perceptron classifier.}
+	\label{fig:mlp_performance}
+\end{figure}
+The multi-layer perceptron performs very well, with an expected accuracy near \SI{70}{\percent}, like the decision tree classifier, but with much less overfitting.
+
+Figure~\ref{fig:sc_performance} gives the performance of a classifier using sequential covering.
+\begin{figure}[!hbtp]
+	\centering
+	\includegraphics[width=\linewidth]{plots/seqcover_performance.tikz}
+	\caption{Learning curves on the train and test sets for the classifier using sequential covering.}
+	\label{fig:sc_performance}
+\end{figure}
+Sequential covering performs the worst out of all the algorithms we tested, while also having the highest variance.
+Its estimated accuracy is between \SI{60}{\percent} and \SI{65}{\percent}.
+
+The above figures thus indicate that in order to obtain good performance, it is preferable to use either a decision tree, or a multi-layer perceptron.
+
+\section{Conclusion}
+Many situations can be more accurately modelled as problems on graphs.
+When one needs to label graphs as being part of a given class, it is very important to have efficient algorithms, both for the mining part and for the classification part.
+The former can e.g. be done using \gspan, one of the fastest graph mining algorithms that are currently known.
+The latter can be done using a myriad of classifiers, and it is often impossible to predict ahead of time which will perform the best.
+For this, several benchmarking tools exist, such as cross-validation, which allow an end-user to build a performant solution to their problem.
+
+\printbibliography
+
+
+\end{document}
