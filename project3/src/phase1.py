@@ -20,7 +20,6 @@ class PatternGraphs:
     This template class is used to define a task for the gSpan implementation.
     You should not modify this class but extend it to define new tasks
     """
-
     def __init__(self, database):
         # A list of subsets of graph identifiers.
         # Is used to specify different groups of graphs (classes and training/test sets).
@@ -38,7 +37,9 @@ class PatternGraphs:
         :param dfs_code: the dfs code of the pattern (as a string).
         :param gid_subsets: the cover (set of graph ids in which the pattern is present) for each subset in self.gid_subsets
         """
-        print("Please implement the store function in a subclass for a specific mining task!")
+        print(
+            "Please implement the store function in a subclass for a specific mining task!"
+        )
 
     def prune(self, gid_subsets):
         """
@@ -47,7 +48,9 @@ class PatternGraphs:
         :param gid_subsets: A list of the cover of the pattern for each subset.
         :return: true if the pattern should be pruned, false otherwise.
         """
-        print("Please implement the prune function in a subclass for a specific mining task!")
+        print(
+            "Please implement the prune function in a subclass for a specific mining task!"
+        )
 
 
 class FrequentPositiveGraphs(PatternGraphs):
@@ -55,7 +58,6 @@ class FrequentPositiveGraphs(PatternGraphs):
     Finds the frequent (support >= minsup) subgraphs among the positive graphs.
     This class provides a method to build a feature matrix for each subset.
     """
-
     def __init__(self, minsup, database, subsets, top_K):
         """
         Initialize the task.
@@ -64,27 +66,32 @@ class FrequentPositiveGraphs(PatternGraphs):
         :param subsets: the subsets (train and/or test sets for positive and negative class) of graph ids.
         """
         super().__init__(database)
-        self.patterns = []  # The patterns found in the end (as dfs codes represented by strings) with their cover (as a list of graph ids).
+        self.patterns = [
+        ]  # The patterns found in the end (as dfs codes represented by strings) with their cover (as a list of graph ids).
         self.minsup = minsup
         self.gid_subsets = subsets
-        self.top_list = [] # list with all top items
+        self.top_list = []  # list with all top items
         self.top_K = top_K
-        self.top_current = 0 # current number of top items
+        self.top_current = 0  # current number of top items
 
     """ remove all elements that have c as conference and f as frequence. """
     def remove(self, c, f):
-        self.patterns = [item for item in self.patterns if item[0] != c or item[1] != f]
-        self.top_list = [item for item in self.top_list if item[0] != c or item[1] != f]
+        self.patterns = [
+            item for item in self.patterns if item[0] != c or item[1] != f
+        ]
+        self.top_list = [
+            item for item in self.top_list if item[0] != c or item[1] != f
+        ]
 
     """ delete the least frequent items with value c as confedence. """
     def delete(self, c):
 
         minF = float("inf")
         i = 0
-        while(i < len(self.top_list) and self.top_list[i][0] == c):
-            if(minF > self.top_list[i][1]):
+        while (i < len(self.top_list) and self.top_list[i][0] == c):
+            if (minF > self.top_list[i][1]):
                 minF = self.top_list[i][1]
-            i+=1
+            i += 1
 
         self.remove(c, minF)
 
@@ -92,20 +99,20 @@ class FrequentPositiveGraphs(PatternGraphs):
     def check_eq_freq(self, c, f):
 
         i = 0
-        while(i < len(self.top_list)):
-            if(self.top_list[i][0] == c and self.top_list[i][1] == f):
+        while (i < len(self.top_list)):
+            if (self.top_list[i][0] == c and self.top_list[i][1] == f):
                 return True
-            i+=1
+            i += 1
         return False
 
     """ check if there are any items with confidence c but their frequence is smaller than f. """
     def check_min_freq(self, c, f):
 
         i = 0
-        while(i < len(self.top_list)):
-            if(self.top_list[i][0] == c and self.top_list[i][1] < f):
+        while (i < len(self.top_list)):
+            if (self.top_list[i][0] == c and self.top_list[i][1] < f):
                 return True
-            i+=1
+            i += 1
         return False
 
     """ Stores top_K patterns. """
@@ -114,25 +121,22 @@ class FrequentPositiveGraphs(PatternGraphs):
         n = len(gid_subsets[1])
         t = p + n
         c = p / t
-        if(self.check_eq_freq(c, t)):
+        if self.check_eq_freq(c, t):
             insort(self.patterns, [c, t, dfs_code])
             insort(self.top_list, [c, t])
-        elif(self.top_current < self.top_K):
+        elif self.top_current < self.top_K:
             insort(self.patterns, [c, t, dfs_code])
             insort(self.top_list, [c, t])
             self.top_current += 1
-        elif(self.top_current == self.top_K):
-            if(self.patterns[0][0] < c):
+        elif self.top_current == self.top_K:
+            if self.patterns[0][0] < c:
                 self.delete(self.patterns[0][0])
                 insort(self.patterns, [c, t, dfs_code])
                 insort(self.top_list, [c, t])
-            elif(self.patterns[0][0] == c and self.check_min_freq(c, t)):
+            elif self.patterns[0][0] == c and self.check_min_freq(c, t):
                 self.delete(self.patterns[0][0])
                 insort(self.patterns, [c, t, dfs_code])
                 insort(self.top_list, [c, t])
-
-
-
 
     """ Prunes any pattern that is not frequent. """
     def prune(self, gid_subsets):
@@ -159,7 +163,8 @@ class FrequentPositiveGraphs(PatternGraphs):
         matrices = [[] for _ in self.gid_subsets]
         for pattern, gid_subsets in self.patterns:
             for i, gid_subset in enumerate(gid_subsets):
-                matrices[i].append(self.create_fm_col(self.gid_subsets[i], gid_subset))
+                matrices[i].append(
+                    self.create_fm_col(self.gid_subsets[i], gid_subset))
         return [numpy.array(matrix).transpose() for matrix in matrices]
 
 
@@ -170,8 +175,10 @@ def example1():
     """
 
     args = sys.argv
-    database_file_name_pos = args[1]  # First parameter: path to positive class file
-    database_file_name_neg = args[2]  # Second parameter: path to negative class file
+    database_file_name_pos = args[
+        1]  # First parameter: path to positive class file
+    database_file_name_neg = args[
+        2]  # Second parameter: path to negative class file
     top_K = int(args[3])  # Third parameter: minimum support
     total_min_freq = int(args[4])
 
@@ -183,11 +190,18 @@ def example1():
         sys.exit()
 
     graph_database = GraphDatabase()  # Graph database object
-    pos_ids = graph_database.read_graphs(database_file_name_pos)  # Reading positive graphs, adding them to database and getting ids
-    neg_ids = graph_database.read_graphs(database_file_name_neg)  # Reading negative graphs, adding them to database and getting ids
+    pos_ids = graph_database.read_graphs(
+        database_file_name_pos
+    )  # Reading positive graphs, adding them to database and getting ids
+    neg_ids = graph_database.read_graphs(
+        database_file_name_neg
+    )  # Reading negative graphs, adding them to database and getting ids
 
-    subsets = [pos_ids, neg_ids]  # The ids for the positive and negative labelled graphs in the database
-    task = FrequentPositiveGraphs(total_min_freq, graph_database, subsets, top_K)  # Creating task
+    subsets = [
+        pos_ids, neg_ids
+    ]  # The ids for the positive and negative labelled graphs in the database
+    task = FrequentPositiveGraphs(total_min_freq, graph_database, subsets,
+                                  top_K)  # Creating task
 
     gSpan(task).run()  # Running gSpan
 
@@ -196,6 +210,43 @@ def example1():
         total_support = pattern[1]
         confidence = pattern[0]
         print('{} {} {}'.format(pattern[2], confidence, total_support))
+
+
+def benchmark(posf, negf, minsup, topk):
+    """
+    Runs gSpan with the specified positive and negative graphs, finds all topK frequent subgraphs based on their confidence
+    with a minimum positive support of minsup and prints them.
+    """
+
+    prefix = "../statement/data/"
+
+    database_file_name_pos = prefix + posf
+    database_file_name_neg = prefix + negf
+    top_K = topk
+    total_min_freq = minsup
+
+    if not os.path.exists(database_file_name_pos):
+        print('{} does not exist.'.format(database_file_name_pos))
+        sys.exit()
+    if not os.path.exists(database_file_name_neg):
+        print('{} does not exist.'.format(database_file_name_neg))
+        sys.exit()
+
+    graph_database = GraphDatabase()  # Graph database object
+    pos_ids = graph_database.read_graphs(
+        database_file_name_pos
+    )  # Reading positive graphs, adding them to database and getting ids
+    neg_ids = graph_database.read_graphs(
+        database_file_name_neg
+    )  # Reading negative graphs, adding them to database and getting ids
+
+    subsets = [
+        pos_ids, neg_ids
+    ]  # The ids for the positive and negative labelled graphs in the database
+    task = FrequentPositiveGraphs(total_min_freq, graph_database, subsets,
+                                  top_K)  # Creating task
+
+    gSpan(task).run()  # Running gSpan
 
 
 if __name__ == '__main__':
