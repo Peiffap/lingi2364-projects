@@ -21,8 +21,8 @@ def bmark(cl, names):
 
     accuracy['seqcover'] = {i: {} for i in values}
 
-    k = 64
-    minsup = 1000
+    k = 250
+    minsup = 300
 
     for nfolds in values:
         acc = p4.benchmark("molecules.pos", "molecules.neg", nfolds, minsup, k,
@@ -48,10 +48,10 @@ if __name__ == "__main__":
     import phase3 as p3
 
     cl = [
-        tree.DecisionTreeClassifier(),
-        svm.LinearSVC(),
+        tree.DecisionTreeClassifier(criterion='entropy'),
+        svm.LinearSVC(class_weight='balanced'),
         neighbors.KNeighborsClassifier(),
-        neural_network.MLPClassifier()
+        neural_network.MLPClassifier(learning_rate_init=0.1, learning_rate='adaptive')
     ]
 
     names = ["dt", "svm", "knn", "mlp"]

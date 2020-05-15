@@ -19,7 +19,7 @@ def bmark(alg):
         try:
             print("k: %g" % (k))
             with timeout(seconds=200):
-                acc = alg("molecules.pos", "molecules.neg", 5, 1000, k)
+                acc = alg("molecules.pos", "molecules.neg", 5, 300, k)
             accuracy[k] = acc
             k *= 2
         except (TimeoutError, RecursionError) as e:

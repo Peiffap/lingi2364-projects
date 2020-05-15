@@ -223,10 +223,11 @@ However, a good way of exploring the hyper-parameter space is to use exponential
 Other choices include using a specialized hyper-parameter optimization library, such as Hyperopt~\cite{hyperopt2013, bergstra2013hyperopt}.
 
 \subsubsection{Results}
-The following tests summarize the performance of the various models when trained on the full \texttt{molecules} dataset, with \(\textnormal{minsup} = 1000\) and \(k = 64\).
+The following tests summarize the performance of the various models when trained on the full \texttt{molecules} dataset, with \(\textnormal{minsup} = 300\) and \(k = 250\).
 These values were chosen so as to provide a good tradeoff between accuracy of the generated models and execution time of the \gspan{} algorithm.
 No particular preprocessing was done, in order to stay in a pattern-based environment.
 However, especially in cases where overfitting occurs a lot, it would be a good idea to apply e.g. a principal components analysis transformation to the data, in order to reduce the problem dimensionality.
+Some algorithms also use distances in their results, hence  standardization of the features can improve performance as well.
 Doing this correctly using scikit-learn can be done using the \py{pipeline} module.
 
 All figures use shading to indicate one standard deviation, and the \(x\)-axis indicates the percentage of the total data set used as training set (when using \(k\)-fold cross-validation, the training set uses \(k-1\) folds, whereas the remaining fold is used as validation set).
@@ -239,7 +240,7 @@ Figure~\ref{fig:dt_performance} gives the performance of a decision tree classif
 	\caption{Learning curves on the train and test sets for the decision tree classifier.}
 	\label{fig:dt_performance}
 \end{figure}
-Results indicate that there is quite a bit of overfitting with this model, though one should expect to have accuracy close to \SI{70}{\percent} on an unknown test set.
+Results indicate that there is quite a bit of overfitting with this model at the start, though one should expect to obtain an accuracy close to \SI{75}{\percent} on an unknown test set when training.
 
 Figure~\ref{fig:svm_performance} gives the performance of a support vector machine classifier.
 \begin{figure}[!hbtp]
@@ -248,7 +249,7 @@ Figure~\ref{fig:svm_performance} gives the performance of a support vector machi
 	\caption{Learning curves on the train and test sets for the support vector machine classifier.}
 	\label{fig:svm_performance}
 \end{figure}
-The figure indicates there is a lot less overfitting than with the decision tree classifier, though results in general are disappointing, with an expected accuracy of about \SI{65}{\percent} on an unknown test set but a large standard deviation on this estimate.
+The figure indicates there is a lot less overfitting than with the decision tree classifier, yet the expected accuracy is very similar, at around \SI{75}{\percent}.
 
 Figure~\ref{fig:knn_performance} gives the performance of a nearest neighbors classifier.
 \begin{figure}[!hbtp]
@@ -257,7 +258,8 @@ Figure~\ref{fig:knn_performance} gives the performance of a nearest neighbors cl
 	\caption{Learning curves on the train and test sets for the nearest neighbors classifier.}
 	\label{fig:knn_performance}
 \end{figure}
-The \(k\)-nearest neighbors algorithm performs similarly to the support vector machine classifier, but has much lower variance on its estimated \SI{65}{\percent} accuracy.
+The \(k\)-nearest neighbors algorithm performs similarly to the other algorithms for lower training set sizes, but significantly worse later on.
+It is evidently not the right algorithm for this task.
 
 Figure~\ref{fig:mlp_performance} gives the performance of a multi-layer perceptron classifier.
 \begin{figure}[!hbtp]
@@ -266,7 +268,7 @@ Figure~\ref{fig:mlp_performance} gives the performance of a multi-layer perceptr
 	\caption{Learning curves on the train and test sets for the multi-layer perceptron classifier.}
 	\label{fig:mlp_performance}
 \end{figure}
-The multi-layer perceptron performs very well, with an expected accuracy near \SI{70}{\percent}, like the decision tree classifier, but with much less overfitting.
+The multi-layer perceptron performs very well, with an expected accuracy around \SI{75}{\percent}, like the decision tree classifier and support vector machine, but with much less overfitting.
 
 Figure~\ref{fig:sc_performance} gives the performance of a classifier using sequential covering.
 \begin{figure}[!hbtp]
@@ -275,17 +277,19 @@ Figure~\ref{fig:sc_performance} gives the performance of a classifier using sequ
 	\caption{Learning curves on the train and test sets for the classifier using sequential covering.}
 	\label{fig:sc_performance}
 \end{figure}
-Sequential covering performs the worst out of all the algorithms we tested, while also having the highest variance.
-Its estimated accuracy is between \SI{60}{\percent} and \SI{65}{\percent}.
+Sequential covering performs tfairly well, and suffers the least from overfitting.
+Its estimated accuracy is between \SI{68}{\percent} and \SI{72}{\percent}.
+Our hypothesis is that with even more training data (i.e., higher value of \(k\)), it would perform even better, perhaps even eclipsing the other algorithms.
 
-The above figures thus indicate that in order to obtain good performance, it is preferable to use either a decision tree, or a multi-layer perceptron.
+The above figures thus indicate that in order to obtain good performance, it is preferable to use either a decision tree, a support vector machine or a multi-layer perceptron.
+The nearest neighbors algorithm is apparently not the right one for this task, while sequential covering shows promising results but would require even longer training times to reach the level of the other algorithms.
 
 \section{Conclusion}
 Many situations can be more accurately modelled as problems on graphs.
 When one needs to label graphs as being part of a given class, it is very important to have efficient algorithms, both for the mining part and for the classification part.
 The former can e.g. be done using \gspan, one of the fastest graph mining algorithms that are currently known.
 The latter can be done using a myriad of classifiers, and it is often impossible to predict ahead of time which will perform the best.
-For this, several benchmarking tools exist, such as cross-validation, which allow an end-user to build a performant solution to their problem.
+For this, several benchmarking tools exist, such as cross-validation, which allow an end-user to build a performant solution to their problem while also having a fairly accuracte assessment of the accuracy they can expect from their model.
 
 \printbibliography
 
